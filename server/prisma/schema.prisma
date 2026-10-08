@@ -14,3 +14,87 @@ model PrismaCrudSmokeTest {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model User {
+  id               Int                   @id @default(autoincrement())
+  email            String                @unique @db.NVarChar(320)
+  name             String                @db.NVarChar(200)
+  passwordHash     String                @db.NVarChar(255)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  roles            UserRole[]
+  serviceDivisions UserServiceDivision[]
+  pageAuditEntries PageAudit[]
+
+  @@map("users")
+}
+
+model Role {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique @db.NVarChar(50)
+  createdAt DateTime   @default(now())
+  users     UserRole[]
+
+  @@map("roles")
+}
+
+model ServiceDivision {
+  id        Int                   @id @default(autoincrement())
+  name      String                @unique @db.NVarChar(150)
+  createdAt DateTime              @default(now())
+  users     UserServiceDivision[]
+
+  @@map("service_divisions")
+}
+
+model UserRole {
+  userId Int
+  roleId Int
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model UserServiceDivision {
+  userId            Int
+  serviceDivisionId Int
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceDivision   ServiceDivision @relation(fields: [serviceDivisionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, serviceDivisionId])
+  @@index([serviceDivisionId])
+  @@map("user_service_divisions")
+}
+
+model Page {
+  id           Int         @id @default(autoincrement())
+  slug         String      @unique @db.NVarChar(200)
+  title        String      @db.NVarChar(300)
+  /// Serialized JSON text. SQL Server's Prisma connector does not support a native Json scalar.
+  content      String      @db.NVarChar(Max)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  auditEntries PageAudit[]
+
+  @@map("pages")
+}
+
+model PageAudit {
+  id         BigInt   @id @default(autoincrement())
+  pageId     Int?
+  userId     Int?
+  action     String   @db.NVarChar(50)
+  /// Optional serialized JSON snapshots of the page before and after the change.
+  beforeData String?  @db.NVarChar(Max)
+  afterData  String?  @db.NVarChar(Max)
+  createdAt  DateTime @default(now())
+  page       Page?    @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  changedBy  User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([pageId, createdAt])
+  @@index([userId, createdAt])
+  @@map("pages_audit")
+}
