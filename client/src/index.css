@@ -21,6 +21,9 @@
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+    --color-secondary-sand: var(--secondary-sand);
+    --color-secondary-water: var(--secondary-water);
+    --color-secondary-palm: var(--secondary-palm);
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
@@ -49,6 +52,13 @@
 }
 
 :root {
+    --font-scale: 1;
+    --ring: var(--primary);
+    --secondary-sand: #c68e4c;
+    --secondary-water: #225d6b;
+    --secondary-palm: #3c441b;
+    --secondary-accent: #074169;
+    --secondary-accent-foreground: #ffffff;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -117,14 +127,78 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+[data-contrast="high"] {
+    --background: #ffffff;
+    --foreground: #111111;
+    --card: #ffffff;
+    --card-foreground: #111111;
+    --popover: #ffffff;
+    --popover-foreground: #111111;
+    --muted: #eeeeee;
+    --muted-foreground: #333333;
+    --border: #444444;
+    --input: #444444;
+    --ring: #111111;
+}
+
+.dark[data-contrast="high"] {
+    --background: #000000;
+    --foreground: #ffffff;
+    --card: #101010;
+    --card-foreground: #ffffff;
+    --popover: #101010;
+    --popover-foreground: #ffffff;
+    --muted: #242424;
+    --muted-foreground: #e0e0e0;
+    --border: #bdbdbd;
+    --input: #bdbdbd;
+    --ring: #ffffff;
+}
+
+[data-contrast="maximum"] {
+    --background: #ffffff;
+    --foreground: #000000;
+    --card: #ffffff;
+    --card-foreground: #000000;
+    --popover: #ffffff;
+    --popover-foreground: #000000;
+    --muted: #e5e5e5;
+    --muted-foreground: #111111;
+    --border: #000000;
+    --input: #000000;
+    --ring: #000000;
+}
+
+.dark[data-contrast="maximum"] {
+    --background: #000000;
+    --foreground: #ffffff;
+    --card: #000000;
+    --card-foreground: #ffffff;
+    --popover: #000000;
+    --popover-foreground: #ffffff;
+    --muted: #1a1a1a;
+    --muted-foreground: #ffffff;
+    --border: #ffffff;
+    --input: #ffffff;
+    --ring: #ffffff;
+}
+
+[data-contrast="maximum"] a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
     }
   body {
     @apply bg-background text-foreground;
+    font-family: "Geist Variable", "Noto Sans Arabic", "Segoe UI", sans-serif;
     }
   html {
     @apply font-sans;
+    font-size: calc(100% * var(--font-scale, 1));
+    scroll-behavior: smooth;
     }
 }

@@ -1,12 +1,12 @@
-import { Button } from "@/components/ui/button";
+import { DisplaySettingsProvider } from "@/components/settings/display-settings-provider";
+import { RecipientHome } from "@/components/recipient/recipient_home";
 
 function App() {
-
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Button>Hello</Button>
-    </div>
+    <DisplaySettingsProvider>
+      <RecipientHome />
+    </DisplaySettingsProvider>
   );
 }
 
-export default App
+export default App;
