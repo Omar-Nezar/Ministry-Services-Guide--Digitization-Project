@@ -9,17 +9,32 @@ import { colors } from "@/styles/colors";
 import {
   FONT_SCALE_MAX,
   FONT_SCALE_MIN,
+  type ColorFilter,
   type ColorMode,
   type ContrastLevel,
   type DisplaySettings,
   type PrimaryColor,
   type SecondaryColor,
+  type SpacingLevel,
+  type TextAlignment,
 } from "@/components/settings/display-settings";
 import { DisplaySettingsContext } from "@/components/settings/display-settings-context";
 
 type StoredSettings = Pick<
   DisplaySettings,
-  "primaryColor" | "secondaryColor" | "contrast" | "fontScale" | "mode"
+  | "primaryColor"
+  | "secondaryColor"
+  | "contrast"
+  | "fontScale"
+  | "mode"
+  | "letterSpacing"
+  | "lineSpacing"
+  | "textAlign"
+  | "colorFilter"
+  | "dyslexiaFont"
+  | "highlightLinks"
+  | "largeCursor"
+  | "reduceMotion"
 >;
 
 const STORAGE_KEY = "ministry-services-display-settings";
@@ -29,7 +44,18 @@ const DEFAULT_SETTINGS: StoredSettings = {
   contrast: "normal",
   fontScale: 1,
   mode: "light",
+  letterSpacing: "normal",
+  lineSpacing: "normal",
+  textAlign: "default",
+  colorFilter: "none",
+  dyslexiaFont: false,
+  highlightLinks: false,
+  largeCursor: false,
+  reduceMotion: false,
 };
+const spacingLevels: SpacingLevel[] = ["normal", "wide", "wider", "widest"];
+const textAlignments: TextAlignment[] = ["default", "left", "center", "right"];
+const colorFilters: ColorFilter[] = ["none", "grayscale", "inverted"];
 const primaryPalette = {
   red: colors.primary_red,
   gold: colors.primary_gold,
@@ -93,6 +119,22 @@ function getStoredSettings(): StoredSettings {
           ? candidate.fontScale
           : DEFAULT_SETTINGS.fontScale,
       mode: candidate.mode === "dark" ? "dark" : DEFAULT_SETTINGS.mode,
+      letterSpacing: spacingLevels.includes(candidate.letterSpacing as SpacingLevel)
+        ? (candidate.letterSpacing as SpacingLevel)
+        : DEFAULT_SETTINGS.letterSpacing,
+      lineSpacing: spacingLevels.includes(candidate.lineSpacing as SpacingLevel)
+        ? (candidate.lineSpacing as SpacingLevel)
+        : DEFAULT_SETTINGS.lineSpacing,
+      textAlign: textAlignments.includes(candidate.textAlign as TextAlignment)
+        ? (candidate.textAlign as TextAlignment)
+        : DEFAULT_SETTINGS.textAlign,
+      colorFilter: colorFilters.includes(candidate.colorFilter as ColorFilter)
+        ? (candidate.colorFilter as ColorFilter)
+        : DEFAULT_SETTINGS.colorFilter,
+      dyslexiaFont: candidate.dyslexiaFont === true,
+      highlightLinks: candidate.highlightLinks === true,
+      largeCursor: candidate.largeCursor === true,
+      reduceMotion: candidate.reduceMotion === true,
     };
   } catch (error) {
     console.warn("Unable to read saved display settings.", error);
@@ -114,6 +156,14 @@ export function DisplaySettingsProvider({
 
     root.classList.toggle("dark", settings.mode === "dark");
     root.dataset.contrast = settings.contrast;
+    root.dataset.letterSpacing = settings.letterSpacing;
+    root.dataset.lineSpacing = settings.lineSpacing;
+    root.dataset.textAlign = settings.textAlign;
+    root.dataset.colorFilter = settings.colorFilter;
+    root.dataset.dyslexiaFont = settings.dyslexiaFont ? "on" : "off";
+    root.dataset.highlightLinks = settings.highlightLinks ? "on" : "off";
+    root.dataset.largeCursor = settings.largeCursor ? "on" : "off";
+    root.dataset.reduceMotion = settings.reduceMotion ? "on" : "off";
     root.style.setProperty("--primary", primary);
     root.style.setProperty("--primary-foreground", getContrastingForeground(primary));
     root.style.setProperty("--secondary-accent", secondary);
@@ -160,6 +210,46 @@ export function DisplaySettingsProvider({
     (mode: ColorMode) => setSettings((current) => ({ ...current, mode })),
     [],
   );
+  const setLetterSpacing = useCallback(
+    (letterSpacing: SpacingLevel) =>
+      setSettings((current) => ({ ...current, letterSpacing })),
+    [],
+  );
+  const setLineSpacing = useCallback(
+    (lineSpacing: SpacingLevel) =>
+      setSettings((current) => ({ ...current, lineSpacing })),
+    [],
+  );
+  const setTextAlign = useCallback(
+    (textAlign: TextAlignment) =>
+      setSettings((current) => ({ ...current, textAlign })),
+    [],
+  );
+  const setColorFilter = useCallback(
+    (colorFilter: ColorFilter) =>
+      setSettings((current) => ({ ...current, colorFilter })),
+    [],
+  );
+  const setDyslexiaFont = useCallback(
+    (dyslexiaFont: boolean) =>
+      setSettings((current) => ({ ...current, dyslexiaFont })),
+    [],
+  );
+  const setHighlightLinks = useCallback(
+    (highlightLinks: boolean) =>
+      setSettings((current) => ({ ...current, highlightLinks })),
+    [],
+  );
+  const setLargeCursor = useCallback(
+    (largeCursor: boolean) =>
+      setSettings((current) => ({ ...current, largeCursor })),
+    [],
+  );
+  const setReduceMotion = useCallback(
+    (reduceMotion: boolean) =>
+      setSettings((current) => ({ ...current, reduceMotion })),
+    [],
+  );
   const resetSettings = useCallback(() => setSettings(DEFAULT_SETTINGS), []);
 
   const value = useMemo(
@@ -170,6 +260,14 @@ export function DisplaySettingsProvider({
       setContrast,
       setFontScale,
       setMode,
+      setLetterSpacing,
+      setLineSpacing,
+      setTextAlign,
+      setColorFilter,
+      setDyslexiaFont,
+      setHighlightLinks,
+      setLargeCursor,
+      setReduceMotion,
       resetSettings,
     }),
     [
@@ -179,6 +277,14 @@ export function DisplaySettingsProvider({
       setContrast,
       setFontScale,
       setMode,
+      setLetterSpacing,
+      setLineSpacing,
+      setTextAlign,
+      setColorFilter,
+      setDyslexiaFont,
+      setHighlightLinks,
+      setLargeCursor,
+      setReduceMotion,
       resetSettings,
     ],
   );

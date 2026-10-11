@@ -188,6 +188,107 @@
     text-decoration-thickness: 2px;
 }
 
+/* Letter spacing (word spacing is paired so it also works for Arabic, where
+   browsers keep letters joined and ignore letter-spacing). */
+[data-letter-spacing="wide"] body,
+[data-letter-spacing="wide"] body * {
+    letter-spacing: 0.05em;
+    word-spacing: 0.1em;
+}
+
+[data-letter-spacing="wider"] body,
+[data-letter-spacing="wider"] body * {
+    letter-spacing: 0.1em;
+    word-spacing: 0.2em;
+}
+
+[data-letter-spacing="widest"] body,
+[data-letter-spacing="widest"] body * {
+    letter-spacing: 0.16em;
+    word-spacing: 0.35em;
+}
+
+/* Line spacing */
+[data-line-spacing="wide"] body,
+[data-line-spacing="wide"] body * {
+    line-height: 1.6;
+}
+
+[data-line-spacing="wider"] body,
+[data-line-spacing="wider"] body * {
+    line-height: 1.9;
+}
+
+[data-line-spacing="widest"] body,
+[data-line-spacing="widest"] body * {
+    line-height: 2.2;
+}
+
+/* Text alignment */
+[data-text-align="left"] body,
+[data-text-align="left"] body * {
+    text-align: left;
+}
+
+[data-text-align="center"] body,
+[data-text-align="center"] body * {
+    text-align: center;
+}
+
+[data-text-align="right"] body,
+[data-text-align="right"] body * {
+    text-align: right;
+}
+
+/* Dyslexia-friendly font (OpenDyslexic / Lexend if installed, otherwise
+   a rounded, widely available fallback). */
+[data-dyslexia-font="on"] body,
+[data-dyslexia-font="on"] body * {
+    font-family: "OpenDyslexic", "Lexend", "Atkinson Hyperlegible",
+        "Comic Sans MS", "Noto Sans Arabic", Tahoma, sans-serif;
+}
+
+/* Highlight links and headings */
+[data-highlight-links="on"] a {
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+[data-highlight-links="on"] :is(h1, h2, h3, h4, h5, h6) {
+    outline: 2px dashed currentColor;
+    outline-offset: 4px;
+    background-color: color-mix(in oklch, currentColor 10%, transparent);
+}
+
+/* Large cursor */
+[data-large-cursor="on"],
+[data-large-cursor="on"] body,
+[data-large-cursor="on"] body * {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M8 4v36l9-9 7 14 7-3-7-14h13z' fill='black' stroke='white' stroke-width='2' stroke-linejoin='round'/></svg>") 8 4, auto;
+}
+
+[data-large-cursor="on"] :is(a, button, summary, [role="button"], [role="switch"], select, label[for], input[type="checkbox"], input[type="radio"]),
+[data-large-cursor="on"] :is(a, button, summary, [role="button"], [role="switch"], select, label[for]) * {
+    cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M8 4v36l9-9 7 14 7-3-7-14h13z' fill='%23ffd400' stroke='black' stroke-width='2' stroke-linejoin='round'/></svg>") 8 4, pointer;
+}
+
+/* Color filters */
+[data-color-filter="grayscale"] {
+    filter: grayscale(1);
+}
+
+[data-color-filter="inverted"] {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+[data-color-filter="inverted"] :is(img, video, canvas) {
+    filter: invert(1) hue-rotate(180deg);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
