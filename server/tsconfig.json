@@ -45,8 +45,7 @@
     // Path aliases
     "paths": {
       "@/*": ["./src/*"],
-      "@db": ["./src/db/db.ts"],
-      "@schema": ["./src/db/index.ts"],
+      "@db": ["./src/db/prisma.js"],
       "@shared/*": ["../shared/*"],
     },
   }

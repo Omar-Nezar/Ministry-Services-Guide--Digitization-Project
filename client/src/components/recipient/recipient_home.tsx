@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -10,15 +9,14 @@ import {
   Clock3,
   FileText,
   Landmark,
-  Languages,
   Search,
   ShieldCheck,
   Sparkles,
   UsersRound,
 } from "lucide-react";
-import { AccessibilityControls } from "@/components/settings/accessibility-controls";
-import { ThemeSwitcher } from "@/components/settings/theme-switcher";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/general/header";
+import { useLanguage } from "@/components/settings/language-context";
 
 const services = [
   {
@@ -60,79 +58,17 @@ const services = [
 ];
 
 export function RecipientHome() {
-  const [isArabic, setIsArabic] = useState(false);
-
-  useEffect(() => {
-    document.documentElement.lang = isArabic ? "ar" : "en";
-    document.documentElement.dir = isArabic ? "rtl" : "ltr";
-    document.title = isArabic
-      ? "دليل الخدمات الحكومية"
-      : "Ministry Services Guide";
-  }, [isArabic]);
+  const { isArabic } = useLanguage();
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b border-[color-mix(in_oklch,var(--secondary-accent-foreground)_25%,var(--secondary-accent))] bg-[var(--secondary-accent)] text-[var(--secondary-accent-foreground)]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
-          <a
-            href="#home"
-            className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={isArabic ? "الصفحة الرئيسية" : "Home"}
-          >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Landmark aria-hidden="true" className="size-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold leading-tight">
-                {isArabic ? "دليل الخدمات" : "Services Guide"}
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                {isArabic ? "الخدمات الحكومية" : "Government services"}
-              </span>
-            </span>
-          </a>
-
-          <nav
-            className="order-3 flex w-full items-center gap-1 overflow-x-auto sm:order-0 sm:w-auto"
-            aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
-          >
-            <a
-              className="rounded-lg px-3 py-2 text-sm font-medium text-[var(--secondary-accent-foreground)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
-              href="#home"
-            >
-              {isArabic ? "الرئيسية" : "Home"}
-            </a>
-            <a
-              className="rounded-lg px-3 py-2 text-sm font-medium text-[color-mix(in_oklch,var(--secondary-accent-foreground)_75%,transparent)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
-              href="#services"
-            >
-              {isArabic ? "الخدمات" : "Services"}
-            </a>
-            <a
-              className="rounded-lg px-3 py-2 text-sm font-medium text-[color-mix(in_oklch,var(--secondary-accent-foreground)_75%,transparent)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
-              href="#about"
-            >
-              {isArabic ? "عن الدليل" : "About"}
-            </a>
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <ThemeSwitcher isArabic={isArabic} compact />
-            <AccessibilityControls isArabic={isArabic} />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] bg-transparent text-[var(--secondary-accent-foreground)] hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)]"
-              onClick={() => setIsArabic((current) => !current)}
-              aria-label={isArabic ? "Switch to English" : "التبديل إلى العربية"}
-            >
-              <Languages aria-hidden="true" className="size-4" />
-              <span>{isArabic ? "English" : "العربية"}</span>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <Header
+        links={[
+          { href: "#home", label: "Home", arabicLabel: "الرئيسية" },
+          { href: "#services", label: "Services", arabicLabel: "الخدمات" },
+          { href: "#about", label: "About", arabicLabel: "عن الدليل" },
+        ]}
+      />
 
       <main id="home">
         <section className="relative isolate overflow-hidden border-b border-border/70">

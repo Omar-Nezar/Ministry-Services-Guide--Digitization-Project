@@ -12,6 +12,7 @@ const serviceDivisions = [
   "Real Estate Development",
   "Real Estate Brokerage",
   "Client Services",
+  "IT",
 ];
 
 async function main() {
