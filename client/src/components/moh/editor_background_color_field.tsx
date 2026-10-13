@@ -13,6 +13,16 @@ const builtInBackgroundColors = [
   { label: "White", value: "#ffffff" },
 ];
 
+const arabicBackgroundLabels: Record<string, string> = {
+  Sea: "بحري",
+  Palm: "نخلي",
+  Sand: "رملي",
+  Mountain: "جبلي",
+  Water: "مائي",
+  Culture: "ثقافي",
+  White: "أبيض",
+};
+
 function readCustomBackgroundColors() {
   try {
     const value = localStorage.getItem(storageKey);
@@ -43,22 +53,7 @@ export function BackgroundColorField({
   const palette = [
     { label: isArabic ? "شفاف" : "Transparent", value: "transparent" },
     ...builtInBackgroundColors.map(({ label, value: color }) => ({
-      label:
-        isArabic && label === "White"
-                ? "أبيض"
-                : isArabic && label === "Sea"
-                  ? "بحري"
-                  : isArabic && label === "Mountain"
-                    ? "جبلي"
-                    : isArabic && label === "Culture"
-                      ? "ثقافي"
-                : isArabic && label === "Sand"
-                  ? "رملي"
-                : isArabic && label === "Water"
-                  ? "مائي"
-                : isArabic && label === "Palm"
-                  ? "نخلي"
-                  : label,
+      label: isArabic ? arabicBackgroundLabels[label] : label,
       value: color,
     })),
     ...customColors.map((color) => ({ label: color, value: color })),

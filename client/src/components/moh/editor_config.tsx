@@ -24,8 +24,16 @@ const paperSizes = {
 } as const;
 
 const pagePadding = 20;
-const headingLineHeight = 36 * 1.15;
+const textLineHeight = 16 * 1.5;
+const emptySlotMinHeight = 320;
 const maximumColumns = 6;
+
+type SlotContentProps = {
+  minEmptyHeight?: number;
+  collisionAxis?: "dynamic" | "x" | "y";
+};
+
+type SlotContent = (props?: SlotContentProps) => ReactNode;
 
 type ContentNode = {
   id?: string;
@@ -36,7 +44,7 @@ type ContentNode = {
 type LayoutColumn = {
   width?: number;
   backgroundColor?: string;
-  content: () => ReactNode;
+  content: SlotContent;
 };
 
 type LayoutRenderProps = {
@@ -45,6 +53,13 @@ type LayoutRenderProps = {
   editMode?: boolean;
   columns?: LayoutColumn[];
 };
+
+function renderSlot(Content: SlotContent, props?: SlotContentProps) {
+  return Content({
+    minEmptyHeight: emptySlotMinHeight,
+    ...props,
+  });
+}
 
 function getChildNodes(node: ContentNode): ContentNode[] {
   const directChildren = Array.isArray(node.props.content)
@@ -107,17 +122,16 @@ function findPageContaining(
   return undefined;
 }
 
-function countPageComponents(node: ContentNode): number {
-  const children = getChildNodes(node);
-  return children.length + children.reduce(
-    (total, child) => total + countPageComponents(child),
+function countComponentTree(node: ContentNode): number {
+  return 1 + getChildNodes(node).reduce(
+    (total, child) => total + countComponentTree(child),
     0,
   );
 }
 
-function countComponentTree(node: ContentNode): number {
-  return 1 + getChildNodes(node).reduce(
-    (total, child) => total + countComponentTree(child),
+export function getPageContentCount(content: unknown): number {
+  return getContentNodes(content).reduce(
+    (total, node) => total + countComponentTree(node),
     0,
   );
 }
@@ -130,7 +144,7 @@ export function getPageContentCapacity(
   const pageHeight = orientation === "landscape" ? size.width : size.height;
   const availableHeight = millimetersToPixels(pageHeight - pagePadding * 2);
 
-  return Math.floor(availableHeight / headingLineHeight);
+  return Math.floor(availableHeight / textLineHeight);
 }
 
 function canInsertIntoPage(
@@ -166,7 +180,9 @@ function canInsertIntoPage(
   );
 
   return (
-    countPageComponents(page) + countComponentTree(candidate) <= capacity
+    getPageContentCount(getChildNodes(page)) +
+      countComponentTree(candidate) <=
+    capacity
   );
 }
 
@@ -363,7 +379,7 @@ export function getEditorConfig(isArabic: boolean): Config {
         },
         render: ({ id, content: Content, orientation }) =>
           renderPaper(
-            Content(),
+            renderSlot(Content),
             paperSizes.A4.width,
             paperSizes.A4.height,
             orientation,
@@ -391,7 +407,7 @@ export function getEditorConfig(isArabic: boolean): Config {
         },
         render: ({ id, content: Content, orientation }) =>
           renderPaper(
-            Content(),
+            renderSlot(Content),
             paperSizes.A3.width,
             paperSizes.A3.height,
             orientation,
@@ -477,7 +493,7 @@ export function getEditorConfig(isArabic: boolean): Config {
                       backgroundColor: backgroundColor ?? "transparent",
                     }}
                   >
-                    {Content()}
+                    {renderSlot(Content, { collisionAxis: "x" })}
                   </div>
                 ),
               )}
@@ -486,13 +502,14 @@ export function getEditorConfig(isArabic: boolean): Config {
         },
       },
       HeadingBlock: {
-        label: isArabic ? "عنوان" : "Heading",
+        label: isArabic ? "نص" : "Text",
         defaultProps: { title: "", children: "" },
         fields: {
           title: nameInOutlineField(isArabic),
           children: {
-            type: "text",
+            type: "richtext",
             label: isArabic ? "النص" : "Text",
+            contentEditable: true,
           },
         },
         resolvePermissions: (data, { parent, appState }) => {
@@ -505,20 +522,20 @@ export function getEditorConfig(isArabic: boolean): Config {
           return { insert: hasRoom, duplicate: hasRoom };
         },
         render: ({ children }) => (
-          <h1
+          <div
             style={{
+              boxSizing: "border-box",
+              width: "100%",
               margin: 0,
-              fontSize: "2.25rem",
-              fontWeight: 600,
-              lineHeight: 1.15,
-              letterSpacing: "-0.025em",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
+              minWidth: 0,
+              overflowWrap: "anywhere",
+              whiteSpace: "pre-wrap",
+              fontSize: "16px",
+              lineHeight: 1.5,
             }}
           >
             {children}
-          </h1>
+          </div>
         ),
       },
     },

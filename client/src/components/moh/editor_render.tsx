@@ -11,6 +11,7 @@ import {
   getLocalizedPageViewports,
   getPageCanvasViewport,
   getPageContentCapacity,
+  getPageContentCount,
   initialData,
 } from "@/components/moh/editor_config";
 
@@ -52,7 +53,7 @@ function getComponentLabel(type: string, isArabic: boolean) {
   if (type === "A4Page") return isArabic ? "صفحة A4" : "A4 page";
   if (type === "A3Page") return isArabic ? "صفحة A3" : "A3 page";
   if (type === "DivBlock") return isArabic ? "حاوية تخطيط" : "Layout container";
-  if (type === "HeadingBlock") return isArabic ? "عنوان" : "Heading";
+  if (type === "HeadingBlock") return isArabic ? "نص" : "Text";
   return type;
 }
 
@@ -238,10 +239,9 @@ export function Editor() {
                   selectedPage.props.orientation,
                 )
               : undefined;
-            const selectedPageContentCount =
-              selectedPage && Array.isArray(selectedPage.props.content)
-                ? selectedPage.props.content.length
-                : 0;
+            const selectedPageContentCount = selectedPage
+              ? getPageContentCount(selectedPage.props.content)
+              : 0;
             const isPageFull =
               selectedPageCapacity !== undefined &&
               selectedPageContentCount >= selectedPageCapacity;
