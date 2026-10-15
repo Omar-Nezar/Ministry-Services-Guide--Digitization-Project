@@ -41,8 +41,12 @@ model Role {
 model ServiceDivision {
   id        Int                   @id @default(autoincrement())
   name      String                @unique @db.NVarChar(150)
+  /// Arabic name; the converter's --category must match it (or the English name)
+  nameAr    String?               @db.NVarChar(150)
+  order     Int                   @default(0)
   createdAt DateTime              @default(now())
   users     UserServiceDivision[]
+  services  Service[]
 
   @@map("service_divisions")
 }
@@ -97,4 +101,48 @@ model PageAudit {
   @@index([pageId, createdAt])
   @@index([userId, createdAt])
   @@map("pages_audit")
+}
+
+model Service {
+  id                Int              @id @default(autoincrement())
+  serviceDivisionId Int
+  serviceDivision   ServiceDivision  @relation(fields: [serviceDivisionId], references: [id])
+  /// From "اسم الخدمة"
+  name              String           @db.NVarChar(400)
+  /// The Word file it came from
+  sourceFile        String?          @db.NVarChar(400)
+  order             Int              @default(0)
+  /// The documentation, one row per section
+  sections          ServiceSection[]
+  flowchart         Flowchart?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([serviceDivisionId, name])
+}
+
+/// One part of a service's documentation (وصف الخدمة, الرسوم, ...).
+model ServiceSection {
+  id        Int     @id @default(autoincrement())
+  serviceId Int
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// description, requirements, documents, channel, department, workflow,
+  /// duration, fees (or intro for text before the first section title)
+  key       String  @db.VarChar(40)
+  /// The title as written in the Word file
+  label     String? @db.NVarChar(400)
+  html      String  @db.NVarChar(Max)
+  order     Int     @default(0)
+
+  @@unique([serviceId, key])
+}
+
+/// The service's flowchart as JSON text (SQL Server has no JSON column in
+/// Prisma). Added later; push.js never changes it.
+model Flowchart {
+  id        Int      @id @default(autoincrement())
+  serviceId Int      @unique
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  json      String   @db.NVarChar(Max)
+  updatedAt DateTime @updatedAt
 }
