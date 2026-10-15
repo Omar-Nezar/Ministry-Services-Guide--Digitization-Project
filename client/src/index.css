@@ -6,6 +6,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+.moh-editor-puck [class*="PuckLayout-inner"] {
+    --puck-sidebar-left-width: var(--puck-user-sidebar-left-width, 220px);
+    --puck-sidebar-right-width: var(--puck-user-sidebar-right-width, 260px);
+}
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Geist Variable', sans-serif;

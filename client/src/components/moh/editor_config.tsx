@@ -186,15 +186,18 @@ function canInsertIntoPage(
   );
 }
 
-const printCanvasViewport = {
-  width: millimetersToPixels(420),
-  height: millimetersToPixels(420),
-};
-
 export const pageViewports: Viewport[] = [
   {
-    ...printCanvasViewport,
-    label: "Print canvas",
+    ...getPageCanvasViewport("A4Page", "portrait"),
+    label: "A4 portrait",
+  },
+  {
+    ...getPageCanvasViewport("A3Page", "portrait"),
+    label: "A3 portrait / A4 landscape",
+  },
+  {
+    ...getPageCanvasViewport("A3Page", "landscape"),
+    label: "A3 landscape",
   },
 ];
 
@@ -274,14 +277,31 @@ export const arabicDictionary: Dictionary = {
 };
 
 export function getLocalizedPageViewports(isArabic: boolean) {
+  const arabicLabels: Record<string, string> = {
+    "A4 portrait": "A4 عمودي",
+    "A3 portrait / A4 landscape": "A3 عمودي / A4 أفقي",
+    "A3 landscape": "A3 أفقي",
+  };
+
   return pageViewports.map((viewport) => ({
     ...viewport,
-    label: isArabic ? "مساحة الطباعة" : viewport.label,
+    label: isArabic
+      ? arabicLabels[viewport.label ?? ""] ?? viewport.label
+      : viewport.label,
   }));
 }
 
-export function getPageCanvasViewport() {
-  return printCanvasViewport;
+export function getPageCanvasViewport(
+  type: "A4Page" | "A3Page",
+  orientation: unknown,
+) {
+  const size = type === "A4Page" ? paperSizes.A4 : paperSizes.A3;
+  const isLandscape = orientation === "landscape";
+
+  return {
+    width: millimetersToPixels(isLandscape ? size.height : size.width),
+    height: "auto" as const,
+  };
 }
 
 function renderPaper(

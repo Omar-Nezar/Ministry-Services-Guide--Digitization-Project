@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Puck, usePuck } from "@puckeditor/core";
 import { Header } from "@/components/general/header";
@@ -74,8 +74,66 @@ function scrollToPage(pageId: string) {
 }
 
 function PageOutline({ children }: { children: React.ReactNode }) {
-  const { appState } = usePuck();
+  const { appState, dispatch } = usePuck();
   const { isArabic } = useLanguage();
+  const selectedIndex = appState.ui.itemSelector?.zone
+    ? -1
+    : (appState.ui.itemSelector?.index ?? -1);
+  const selectedNode =
+    selectedIndex >= 0
+      ? appState.data.content[selectedIndex]
+      : undefined;
+  const selectedPageType =
+    selectedNode?.type === "A4Page" || selectedNode?.type === "A3Page"
+      ? selectedNode.type
+      : undefined;
+  const selectedOrientation =
+    selectedNode?.props.orientation === "landscape" ? "landscape" : "portrait";
+  const selectedPageKey = selectedPageType
+    ? `${selectedIndex}:${selectedPageType}:${selectedOrientation}`
+    : null;
+  const selectedPageViewport = useMemo(
+    () =>
+      selectedPageType
+        ? getPageCanvasViewport(selectedPageType, selectedOrientation)
+        : undefined,
+    [selectedPageType, selectedOrientation],
+  );
+  const synchronizedPage = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!selectedPageKey || !selectedPageViewport) {
+      synchronizedPage.current = null;
+      return;
+    }
+    if (synchronizedPage.current === selectedPageKey) {
+      return;
+    }
+
+    synchronizedPage.current = selectedPageKey;
+    const currentViewport = appState.ui.viewports.current;
+    if (
+      currentViewport.width === selectedPageViewport.width &&
+      currentViewport.height === selectedPageViewport.height
+    ) {
+      return;
+    }
+
+    dispatch({
+      type: "setUi",
+      ui: {
+        viewports: {
+          ...appState.ui.viewports,
+          current: selectedPageViewport,
+        },
+      },
+    });
+  }, [
+    appState.ui.viewports,
+    dispatch,
+    selectedPageKey,
+    selectedPageViewport,
+  ]);
 
   useEffect(() => {
     const outlineRoot = document.querySelector('[class*="LayerTreeRoot"]');
@@ -151,7 +209,11 @@ export function Editor() {
     <>
       <Header />
       <main className="min-h-[calc(100vh-4.5rem)] bg-muted/40">
-        <div dir="ltr" lang={isArabic ? "ar" : "en"}>
+        <div
+          className="moh-editor-puck"
+          dir="ltr"
+          lang={isArabic ? "ar" : "en"}
+        >
           <Puck
             config={localizedConfig}
             data={initialData}
@@ -198,7 +260,7 @@ export function Editor() {
                     itemSelector: { index: pageIndex },
                     viewports: {
                       ...currentUi.viewports,
-                      current: getPageCanvasViewport(),
+                      current: getPageCanvasViewport(type, orientation),
                     },
                   }),
                 });
@@ -217,7 +279,10 @@ export function Editor() {
                     itemSelector: { index },
                     viewports: {
                       ...currentUi.viewports,
-                      current: getPageCanvasViewport(),
+                      current: getPageCanvasViewport(
+                        page.component.type as "A4Page" | "A3Page",
+                        page.component.props.orientation,
+                      ),
                     },
                   }),
                 });
