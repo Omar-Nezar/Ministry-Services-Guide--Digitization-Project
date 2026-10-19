@@ -1,5 +1,5 @@
 {
-    "name": "document_tracker",
+    "name": "Ministry-Services-Guide",
     "private": true,
     "workspaces": [
         "client",

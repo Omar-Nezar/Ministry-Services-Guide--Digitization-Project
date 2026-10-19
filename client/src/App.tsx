@@ -8,7 +8,7 @@ import { RecipientHome } from "@/components/recipient/recipient_home";
 import { Navigate, Route, Routes } from "react-router";
 
 const DocumentEditor = lazy(
-  () => import("@/components/document_editor/DocumentEditor")
+  () => import("@/components/document_editor/document_editor")
 );
 
 function App() {
