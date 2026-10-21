@@ -305,3 +305,66 @@
     scroll-behavior: smooth;
     }
 }
+
+/* ============================================================================
+   Tiptap image resize handles — Document editor
+   The Image extension is configured with resize: { enabled: true } in
+   document_editor.tsx. Tiptap's ResizableNodeView renders each image inside a
+   [data-resize-container] and appends [data-resize-handle] elements for each
+   configured corner. Without the styles below those handles are invisible
+   (no size, no background, no cursor), so resizing works programmatically but
+   cannot be used in the UI.
+   ============================================================================ */
+
+/* Container wrapping each resizable image (display:flex applied inline by Tiptap) */
+[data-resize-container] {
+  box-sizing: border-box;
+}
+
+/* Keep editor images inside the available page width by default */
+[data-resize-container] img,
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Resize handles */
+[data-resize-handle] {
+  position: absolute;
+  background-color: #7f7f7f;
+  opacity: 0.85;
+  z-index: 999;
+  width: 8px;
+  height: 8px;
+}
+
+[data-resize-handle="top-left"] {
+  top: -4px !important;
+  left: -4px !important;
+  cursor: nwse-resize;
+}
+
+[data-resize-handle="top-right"] {
+  top: -4px !important;
+  right: -4px !important;
+  cursor: nesw-resize;
+}
+
+[data-resize-handle="bottom-left"] {
+  bottom: -4px !important;
+  left: -4px !important;
+  cursor: nesw-resize;
+}
+
+[data-resize-handle="bottom-right"] {
+  bottom: -4px !important;
+  right: -4px !important;
+  cursor: nwse-resize;
+}
+
+/* Visual feedback while a resize is in progress */
+[data-resize-container][data-resize-state="true"] {
+  outline: 2px solid #7f7f7f;
+  outline-offset: 2px;
+}
