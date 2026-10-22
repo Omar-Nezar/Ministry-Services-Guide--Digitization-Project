@@ -18,6 +18,8 @@ type AuthState = {
 type LoginCredentials = {
   email: string;
   password: string;
+  role?: string;
+  department?: string;
 };
 
 const initialState: AuthState = {

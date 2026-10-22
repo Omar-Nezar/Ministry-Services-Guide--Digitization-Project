@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@db";
 import { hashPassword, verifyPassword } from "@/utils/password.js";
+import { signToken, type TokenPayload } from "@/utils/jwt.js";
+import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 
 type CreateUserInput = {
   name: string;
@@ -13,6 +15,8 @@ type CreateUserInput = {
 type LoginInput = {
   email: string;
   password: string;
+  role?: string;
+  department?: string;
 };
 
 function isLoginInput(body: unknown): body is LoginInput {
@@ -27,7 +31,9 @@ function isLoginInput(body: unknown): body is LoginInput {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim()) &&
     typeof input.password === "string" &&
     input.password.length > 0 &&
-    input.password.length <= 1024
+    input.password.length <= 1024 &&
+    (input.role === undefined || typeof input.role === "string") &&
+    (input.department === undefined || typeof input.department === "string")
   );
 }
 
@@ -80,14 +86,50 @@ export async function loginUser(
       return;
     }
 
+    const availableRoles = user.roles.map(({ role }) => role.name);
+    const availableDivisions = user.serviceDivisions.map(
+      ({ serviceDivision }) => serviceDivision.name,
+    );
+
+    // Validate selected role (if provided) is one the user actually has
+    let selectedRole: string | undefined;
+    if (request.body.role !== undefined) {
+      if (!availableRoles.includes(request.body.role)) {
+        response.status(403).json({ error: "You are not assigned to the selected role." });
+        return;
+      }
+      selectedRole = request.body.role;
+    } else {
+      selectedRole = availableRoles[0];
+    }
+
+    // Validate selected department/division (if provided) is one the user actually belongs to
+    let selectedDepartment: string | undefined;
+    if (request.body.department !== undefined) {
+      if (!availableDivisions.includes(request.body.department)) {
+        response.status(403).json({ error: "You are not assigned to the selected department." });
+        return;
+      }
+      selectedDepartment = request.body.department;
+    } else {
+      selectedDepartment = availableDivisions[0];
+    }
+
+    const tokenPayload: TokenPayload = {
+      userId: user.id,
+      email: user.email,
+      roles: [selectedRole!],
+      serviceDivisions: [selectedDepartment!],
+    };
+    const token = signToken(tokenPayload);
+
     response.status(200).json({
       id: user.id,
       name: user.name,
       email: user.email,
-      roles: user.roles.map(({ role }) => role.name),
-      departments: user.serviceDivisions.map(
-        ({ serviceDivision }) => serviceDivision.name,
-      ),
+      roles: [selectedRole!],
+      departments: [selectedDepartment!],
+      token,
     });
   } catch (error: unknown) {
     console.error("Failed to log in user.", error);
@@ -175,5 +217,136 @@ async function createUser(
 
     console.error("Failed to register user.", error);
     response.status(500).json({ error: "Failed to register user." });
+  }
+}
+
+export async function getCurrentUser(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  if (!request.user) {
+    response.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: request.user.userId },
+      include: {
+        roles: { include: { role: { select: { name: true } } } },
+        serviceDivisions: {
+          include: { serviceDivision: { select: { name: true } } },
+        },
+      },
+    });
+
+    if (!user) {
+      response.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    const roles = user.roles.map(({ role }) => role.name);
+    const departments = user.serviceDivisions.map(
+      ({ serviceDivision }) => serviceDivision.name,
+    );
+
+    response.status(200).json({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles,
+      departments,
+    });
+  } catch (error: unknown) {
+    console.error("Failed to get current user.", error);
+    response.status(500).json({ error: "Unable to get user right now." });
+  }
+}
+
+export async function deleteUser(
+  request: Request,
+  response: Response,
+): Promise<void> {
+  const { email } = request.params;
+
+  if (!email || email.trim().length === 0) {
+    response.status(400).json({ error: "Email parameter is required." });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      include: {
+        roles: { include: { role: { select: { name: true } } } },
+        serviceDivisions: {
+          include: { serviceDivision: { select: { name: true } } },
+        },
+      },
+    });
+
+    if (!user) {
+      response.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    // // Check if the authenticated user has admin role
+    // const isAdmin = user.roles.some(({ role }) => role.name === "admin");
+
+    // if (!isAdmin) {
+    //   response.status(403).json({
+    //     error: "Admin role required to delete users.",
+    //   });
+    //   return;
+    // }
+
+    // Delete the user
+    await prisma.user.delete({
+      where: { email: email.trim().toLowerCase() },
+    });
+
+    response.status(200).json({
+      message: "User deleted successfully.",
+      deletedUser: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error: unknown) {
+    console.error("Failed to delete user.", error);
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      response.status(400).json({
+        error: "Cannot delete user because other records depend on it.",
+      });
+      return;
+    }
+    response.status(500).json({ error: "Failed to delete user." });
+  }
+}
+
+export async function getAuthOptions(
+  _request: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    const [roles, serviceDivisions] = await Promise.all([
+      prisma.role.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.serviceDivision.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+
+    response.status(200).json({
+      roles: roles.map(({ name }) => name),
+      serviceDivisions: serviceDivisions.map(({ name }) => name),
+    });
+  } catch (error: unknown) {
+    console.error("Failed to get auth options.", error);
+    response.status(500).json({ error: "Unable to load options right now." });
   }
 }
