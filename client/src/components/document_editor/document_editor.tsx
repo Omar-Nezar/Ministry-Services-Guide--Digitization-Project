@@ -11,7 +11,6 @@ import Image from "@tiptap/extension-image";
 
 import { Header } from "@/components/general/header";
 import { EditorToolbar } from "./editor_toolbar";
-import { AdvancedPageEditor } from "./advanced/AdvancedPageEditor";
 
 const PAPER_DIMENSIONS: Record<
   PaperSize,
@@ -97,7 +96,7 @@ export default function DocumentEditor() {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div>
       <Header
         links={[
           { href: "/moh", label: "Home", arabicLabel: "الصفحة الرئيسية" },
@@ -117,32 +116,9 @@ export default function DocumentEditor() {
           className="bg-white shadow-lg border rounded-sm transition-all duration-300 my-auto flex flex-col"
           style={pageStyle}
         >
-          {/* Advanced Page Editor Integration */}
-          <AdvancedPageEditor
-            page={{
-              id: 1,
-              title: "Test Page",
-              type: "columns",
-              columns: [
-                {
-                  id: 1,
-                  width: 50,
-                  labelWidth: 30,
-                  entries: [
-                    { id: 1, columnId: 1, labelId: 1, order: 0, content: "" },
-                  ],
-                },
-              ],
-              imagePath: null,
-              imageFit: "contain",
-              caption: null,
-            } as any}
-            index={0}
-            total={1}
-            labels={[]}
-            onPageChange={(p) => console.log("Page changed", p)}
-            onMove={(dir) => console.log("Move", dir)}
-            onDelete={() => console.log("Delete")}
+          <EditorContent
+            className="prose max-w-none focus:outline-none flex-1"
+            editor={editor}
           />
         </div>
       </main>
