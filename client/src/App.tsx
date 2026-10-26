@@ -25,6 +25,9 @@ const EditorHome = lazy(() =>
 const ServiceEditor = lazy(() =>
   import("@/components/guide_editor/service-editor").then((m) => ({ default: m.ServiceEditor }))
 );
+const StaffPage = lazy(() =>
+  import("@/components/guide_editor/staff-page").then((m) => ({ default: m.StaffPage }))
+);
 const LabelsPage = lazy(() =>
   import("@/components/guide_editor/labels-page").then((m) => ({ default: m.LabelsPage }))
 );
@@ -49,6 +52,8 @@ function App() {
             <Route path="/moh/login" element={<Login />} />
           </Route>
 
+          {/* A member with a temporary password must choose their own before the editor opens */}
+
           {/* The services editor (admin and staff) */}
           <Route
             path="/moh/editor"
@@ -69,6 +74,7 @@ function App() {
             <Route index element={<EditorHome />} />
             <Route path="service/:serviceId" element={<ServiceEditor />} />
             <Route path="labels" element={<LabelsPage />} />
+            <Route path="staff" element={<StaffPage />} />
           </Route>
 
           <Route

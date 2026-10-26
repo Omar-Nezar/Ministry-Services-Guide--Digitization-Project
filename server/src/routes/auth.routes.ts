@@ -1,10 +1,7 @@
 import { Router } from "express";
 import {
   loginUser,
-  registerUser,
-  registerAdmin,
   getCurrentUser,
-  getAuthOptions,
   deleteUser,
 } from "../controllers/auth.controller.js";
 import { authenticateToken } from "../middlewares/auth.middleware.js";
@@ -17,12 +14,6 @@ import {
 const authRouter = Router();
 
 authRouter.post("/login", loginUser);
-authRouter.post("/register", registerUser);
-// TODO: Remove this publicly accessible admin registration route before deployment.
-authRouter.post("/register-admin", registerAdmin);
-
-// Public options for login form (roles and service divisions)
-authRouter.get("/options", getAuthOptions);
 
 // Protected routes (require a valid JWT in the Authorization: Bearer <token> header)
 authRouter.get("/me", authenticateToken, getCurrentUser);

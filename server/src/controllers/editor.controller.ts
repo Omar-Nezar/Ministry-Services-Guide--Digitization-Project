@@ -6,6 +6,7 @@ import { prisma } from "@db";
 import type { TokenPayload } from "@/utils/jwt.js";
 import { byOrder, serviceLabels } from "@/utils/guide.js";
 import { canEditDivision, isAdmin } from "@/utils/permissions.js";
+import { logServiceChange } from "@/utils/audit.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 import { UPLOAD_DIR } from "@/middlewares/upload.middleware.js";
 
@@ -36,6 +37,13 @@ function idList(body: unknown): number[] | null {
   return Array.isArray(body) && body.every((n) => Number.isInteger(n)) ? (body as number[]) : null;
 }
 
+/** A service (loaded with its category) as the audit log wants it. */
+const auditOf = (service: { id: number; name: string; serviceDivision: { name: string } }) => ({
+  id: service.id,
+  name: service.name,
+  divisionName: service.serviceDivision.name,
+});
+
 function removeUpload(imagePath: string | null | undefined): void {
   if (!imagePath) return;
   fs.rm(path.join(UPLOAD_DIR, path.basename(imagePath)), { force: true }, () => {});
@@ -57,7 +65,12 @@ export async function getTree(request: Request, response: Response): Promise<voi
       services: { orderBy: serviceOrder, select: { id: true, name: true } },
     },
   });
-  response.json(divisions.map((d) => ({ ...d, editable: canEditDivision(user, d.name) })));
+  // Staff see only the categories they may edit; admins see all
+  response.json(
+    divisions
+      .map((d) => ({ ...d, editable: canEditDivision(user, d.name) }))
+      .filter((d) => d.editable),
+  );
 }
 
 export async function updateDivision(request: Request, response: Response): Promise<void> {
@@ -103,6 +116,7 @@ export async function createService(request: Request, response: Response): Promi
       data: { name, serviceDivisionId: division.id, order: last + 1 },
       select: { id: true, name: true },
     });
+    await logServiceChange(request, "service.create", { ...created, divisionName: division.name });
     response.status(201).json(created);
   } catch (error) {
     if (isDuplicate(error)) return duplicate(response);
@@ -125,7 +139,7 @@ export async function arrangeServices(request: Request, response: Response): Pro
   }
 
   const [services, divisions] = await Promise.all([
-    prisma.service.findMany({ where: { id: { in: moves.map((m) => m.id) } }, select: { id: true, serviceDivision: { select: { name: true } } } }),
+    prisma.service.findMany({ where: { id: { in: moves.map((m) => m.id) } }, select: { id: true, name: true, serviceDivision: { select: { name: true } } } }),
     prisma.serviceDivision.findMany({ select: { id: true, name: true } }),
   ]);
   const divisionName = new Map(divisions.map((d) => [d.id, d.name]));
@@ -142,6 +156,14 @@ export async function arrangeServices(request: Request, response: Response): Pro
   } catch (error) {
     if (isDuplicate(error)) return duplicate(response);
     throw error;
+  }
+  // Only a move to another category is logged, not the reordering inside one
+  for (const m of moves) {
+    const service = services.find((s) => s.id === m.id)!;
+    const to = divisionName.get(m.serviceDivisionId)!;
+    if (service.serviceDivision.name !== to) {
+      await logServiceChange(request, "service.move", { id: service.id, name: service.name, divisionName: to }, `${service.serviceDivision.name} → ${to}`);
+    }
   }
   response.json({ ok: true });
 }
@@ -169,6 +191,8 @@ export async function getService(request: Request, response: Response): Promise<
   });
   if (!service) return notFound(response, "Service");
   const { id, name, color } = service.serviceDivision;
+  // Staff cannot open services of other categories
+  if (!canEditDivision(userOf(request), name)) return forbidden(response);
   response.json({
     id: service.id,
     name: service.name,
@@ -186,7 +210,9 @@ export async function renameService(request: Request, response: Response): Promi
   const name = text(bodyOf(request)["name"], 400);
   if (!name) return bad(response, "Provide a name.");
   try {
-    response.json(await prisma.service.update({ where: { id: service.id }, data: { name }, select: { id: true, name: true } }));
+    const renamed = await prisma.service.update({ where: { id: service.id }, data: { name }, select: { id: true, name: true } });
+    await logServiceChange(request, "service.rename", { ...renamed, divisionName: service.serviceDivision.name }, `${service.name} → ${name}`);
+    response.json(renamed);
   } catch (error) {
     if (isDuplicate(error)) return duplicate(response);
     throw error;
@@ -198,6 +224,7 @@ export async function deleteService(request: Request, response: Response): Promi
   if (!service) return;
   const images = await prisma.serviceImage.findMany({ where: { serviceId: service.id }, select: { imagePath: true } });
   await prisma.service.delete({ where: { id: service.id } });
+  await logServiceChange(request, "service.delete", { id: service.id, name: service.name, divisionName: service.serviceDivision.name }, null, { serviceDeleted: true });
   images.forEach((i) => removeUpload(i.imagePath));
   response.json({ ok: true });
 }
@@ -222,6 +249,7 @@ export async function saveSection(request: Request, response: Response): Promise
     create: { serviceId: service.id, key, label: label?.name ?? null, html, order: label?.order ?? 0 },
   });
   await prisma.service.update({ where: { id: service.id }, data: { updatedAt: new Date() } });
+  await logServiceChange(request, "section.save", auditOf(service), label?.name ?? section?.label ?? key);
   response.json({ ok: true });
 }
 
@@ -239,6 +267,7 @@ export async function createFlowchart(request: Request, response: Response): Pro
     data: { serviceId: service.id, title: text(body["title"], 400), json: body["json"], order: last + 1 },
     select: { id: true, title: true, json: true },
   });
+  await logServiceChange(request, "flowchart.create", auditOf(service), created.title);
   response.status(201).json(created);
 }
 
@@ -263,6 +292,7 @@ export async function updateFlowchart(request: Request, response: Response): Pro
   }
   if ("title" in body) data.title = typeof body["title"] === "string" ? body["title"].trim().slice(0, 400) || null : null;
   await prisma.flowchart.update({ where: { id: flowchart.id }, data });
+  await logServiceChange(request, "flowchart.update", auditOf(flowchart.service), "title" in data ? String(data.title ?? "") : flowchart.title);
   response.json({ ok: true });
 }
 
@@ -270,6 +300,7 @@ export async function deleteFlowchart(request: Request, response: Response): Pro
   const flowchart = await ownFlowchart(request, response);
   if (!flowchart) return;
   await prisma.flowchart.delete({ where: { id: flowchart.id } });
+  await logServiceChange(request, "flowchart.delete", auditOf(flowchart.service), flowchart.title);
   response.json({ ok: true });
 }
 
@@ -296,6 +327,7 @@ export async function createImage(request: Request, response: Response): Promise
   const created = await prisma.serviceImage.create({
     data: { serviceId: service.id, imagePath: `uploads/${request.file.filename}`, order: last + 1 },
   });
+  await logServiceChange(request, "image.create", auditOf(service));
   response.status(201).json(created);
 }
 
@@ -315,6 +347,7 @@ export async function replaceImage(request: Request, response: Response): Promis
   if (!request.file) return bad(response, NO_PICTURE);
   const updated = await prisma.serviceImage.update({ where: { id: image.id }, data: { imagePath: `uploads/${request.file.filename}` } });
   removeUpload(image.imagePath);
+  await logServiceChange(request, "image.replace", auditOf(image.service));
   response.json(updated);
 }
 
@@ -329,7 +362,9 @@ export async function updateImage(request: Request, response: Response): Promise
     data.imageFit = fit;
   }
   if ("caption" in body) data.caption = typeof body["caption"] === "string" ? body["caption"].trim().slice(0, 400) || null : null;
-  response.json(await prisma.serviceImage.update({ where: { id: image.id }, data }));
+  const updated = await prisma.serviceImage.update({ where: { id: image.id }, data });
+  await logServiceChange(request, "image.update", auditOf(image.service));
+  response.json(updated);
 }
 
 export async function deleteImage(request: Request, response: Response): Promise<void> {
@@ -337,6 +372,7 @@ export async function deleteImage(request: Request, response: Response): Promise
   if (!image) return;
   await prisma.serviceImage.delete({ where: { id: image.id } });
   removeUpload(image.imagePath);
+  await logServiceChange(request, "image.delete", auditOf(image.service));
   response.json({ ok: true });
 }
 

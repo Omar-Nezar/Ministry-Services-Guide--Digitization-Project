@@ -79,6 +79,33 @@ export interface LabelColor {
   color: string;
 }
 
+// ---- the admin dashboard and staff accounts (/admin/..., admins only) ----
+
+export interface LatestUpdate {
+  /** service.rename, section.save, image.delete, ... */
+  action: string;
+  serviceId: number | null;
+  serviceName: string;
+  divisionName: string | null;
+  userName: string;
+  detail: string | null;
+  createdAt: string;
+}
+
+export interface Dashboard {
+  totalServices: number;
+  latestUpdate: LatestUpdate | null;
+}
+
+export interface StaffMember {
+  id: number;
+  name: string;
+  email: string;
+  isActive: boolean;
+  createdAt: string;
+  divisions: { id: number; name: string; nameAr: string | null }[];
+}
+
 const get = <T>(url: string, signal?: AbortSignal) => api.get<T>(url, signal ? { signal } : undefined).then((r) => r.data);
 
 const multipart = { headers: { "Content-Type": "multipart/form-data" } };
@@ -135,6 +162,14 @@ export const editorApi = {
   setLabelColor: (serviceDivisionId: number, labelId: number, color: string | null) =>
     api.put("/editor/label-colors", { serviceDivisionId, labelId, color }),
   clearLabelColors: (serviceDivisionId: number) => api.delete(`/editor/label-colors/${serviceDivisionId}`),
+};
+
+export const adminApi = {
+  dashboard: () => get<Dashboard>("/admin/dashboard"),
+  staff: () => get<StaffMember[]>("/admin/staff"),
+  updateStaff: (id: number, data: { name?: string; divisionId?: number; isActive?: boolean }) =>
+    api.patch<StaffMember>(`/admin/staff/${id}`, data).then((r) => r.data),
+  deleteStaff: (id: number) => api.delete(`/admin/staff/${id}`),
 };
 
 /** URL of an uploaded picture ("uploads/…" as the API stores it). */

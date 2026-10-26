@@ -7,6 +7,7 @@ export type AuthUser = {
   email: string;
   roles: string[];
   departments: string[];
+  /** True while the account still has the temporary password an admin gave it */
   token: string;
 };
 
@@ -14,17 +15,11 @@ type AuthState = {
   user: AuthUser | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
-  roles: string[];
-  serviceDivisions: string[];
-  optionsStatus: "idle" | "loading" | "succeeded" | "failed";
-  optionsError: string | null;
 };
 
 type LoginCredentials = {
   email: string;
   password: string;
-  role?: string;
-  department?: string;
 };
 
 const USER_STORAGE_KEY = "ministry-services-user";
@@ -53,10 +48,6 @@ const initialState: AuthState = {
   user: loadStoredUser(),
   status: "idle",
   error: null,
-  roles: [],
-  serviceDivisions: [],
-  optionsStatus: "idle",
-  optionsError: null,
 };
 
 function isAuthUser(value: unknown): value is AuthUser {
@@ -114,38 +105,6 @@ export const loginUser = createAsyncThunk<
   }
 });
 
-export const fetchAuthOptions = createAsyncThunk<
-  { roles: string[]; serviceDivisions: string[] },
-  void,
-  { rejectValue: string }
->("auth/fetchOptions", async (_, { rejectWithValue }) => {
-  try {
-    const response = await api.get("/auth/options");
-    const payload = response.data;
-
-    if (
-      typeof payload !== "object" ||
-      payload === null ||
-      !Array.isArray((payload as Record<string, unknown>).roles) ||
-      !Array.isArray((payload as Record<string, unknown>).serviceDivisions)
-    ) {
-      return rejectWithValue("The server returned an unexpected response.");
-    }
-
-    return {
-      roles: (payload as Record<string, unknown>).roles as string[],
-      serviceDivisions: (payload as Record<string, unknown>)
-        .serviceDivisions as string[],
-    };
-  } catch (error: any) {
-    console.error("Unable to reach the options service.", error);
-    const errorData = error.response?.data;
-    return rejectWithValue(
-      getApiError(errorData) ?? "Unable to reach the server. Check that the API is running.",
-    );
-  }
-});
-
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -173,21 +132,6 @@ const authSlice = createSlice({
         state.status = "failed";
         state.error =
           action.payload ?? "Unable to sign in. Please try again.";
-      })
-      .addCase(fetchAuthOptions.pending, (state) => {
-        state.optionsStatus = "loading";
-        state.optionsError = null;
-      })
-      .addCase(fetchAuthOptions.fulfilled, (state, action) => {
-        state.optionsStatus = "succeeded";
-        state.roles = action.payload.roles;
-        state.serviceDivisions = action.payload.serviceDivisions;
-        state.optionsError = null;
-      })
-      .addCase(fetchAuthOptions.rejected, (state, action) => {
-        state.optionsStatus = "failed";
-        state.optionsError =
-          action.payload ?? "Unable to load options right now.";
       });
   },
 });

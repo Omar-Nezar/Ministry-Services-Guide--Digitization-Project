@@ -20,11 +20,14 @@ model User {
   email            String                @unique @db.NVarChar(320)
   name             String                @db.NVarChar(200)
   passwordHash     String                @db.NVarChar(255)
+  /// A disabled account cannot sign in, and its existing tokens stop working
+  isActive         Boolean               @default(true)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   roles            UserRole[]
   serviceDivisions UserServiceDivision[]
   pageAuditEntries PageAudit[]
+  serviceAuditEntries ServiceAudit[]
 
   @@map("users")
 }
@@ -120,10 +123,34 @@ model Service {
   /// A service can have several flowcharts
   flowcharts        Flowchart[]
   images            ServiceImage[]
+  auditEntries      ServiceAudit[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
   @@unique([serviceDivisionId, name])
+}
+
+/// What the editor changed: one row per change to a service, written by the editor API.
+/// The names are copied so a row still reads well after the service or the user is deleted.
+model ServiceAudit {
+  id           BigInt   @id @default(autoincrement())
+  serviceId    Int?
+  service      Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceName  String   @db.NVarChar(400)
+  divisionName String?  @db.NVarChar(150)
+  userId       Int?
+  changedBy    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userName     String   @db.NVarChar(200)
+  /// service.create, service.rename, service.delete, service.move, section.save,
+  /// flowchart.create|update|delete, image.create|replace|update|delete
+  action       String   @db.NVarChar(50)
+  /// Short extra detail: the old name of a rename, the label of a saved section, ...
+  detail       String?  @db.NVarChar(500)
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([serviceId, createdAt])
+  @@map("service_audit")
 }
 
 /// One part of a service's documentation (وصف الخدمة, الرسوم, ...).

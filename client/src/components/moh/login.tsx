@@ -1,6 +1,6 @@
-import { useEffect, useState, type SubmitEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { ArrowLeft, LogOut } from "lucide-react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Header } from "@/components/general/header";
 import { useLanguage } from "@/components/settings/language-context";
@@ -17,20 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-  SelectGroup,
-} from "@/components/ui/select";
-import {
-  loginUser,
-  fetchAuthOptions,
-  logout,
-} from "@/slices/auth.slice";
+import { loginUser, logout } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
 
 const arabicLoginErrors: Record<string, string> = {
@@ -42,33 +29,8 @@ const arabicLoginErrors: Record<string, string> = {
   "Provide a valid email and password.":
     "يرجى إدخال بريد إلكتروني صالح وكلمة مرور.",
   "Unable to log in right now.": "يتعذر تسجيل الدخول الآن.",
-  "You are not assigned to the selected role.": "أنت غير معين لهذا الدور.",
-  "You are not assigned to the selected department.": "أنت غير معين لهذا القسم.",
-};
-
-const roleLabels: Record<string, { en: string; ar: string }> = {
-  admin: { en: "Administrator", ar: "مدير النظام" },
-  staff: { en: "Staff Member", ar: "موظف" },
-};
-
-const divisionLabels: Record<string, { en: string; ar: string }> = {
-  "Real Estate Registry": { en: "Real Estate Registry", ar: "سجل العقارات" },
-  Lands: { en: "Lands", ar: "الأراضي" },
-  "Social Housing and Projects": {
-    en: "Social Housing and Projects",
-    ar: "الإسكان الاجتماعي والمشاريع",
-  },
-  "Urban Planning": { en: "Urban Planning", ar: "التخطيط العمراني" },
-  "Real Estate Development": {
-    en: "Real Estate Development",
-    ar: "التطوير العقاري",
-  },
-  "Real Estate Brokerage": {
-    en: "Real Estate Brokerage",
-    ar: "الوساطة العقارية",
-  },
-  "Client Services": { en: "Client Services", ar: "خدمة المراجعين" },
-  IT: { en: "Information Technology", ar: "تكنولوجيا المعلومات" },
+  "This account is disabled. Contact an administrator.":
+    "هذا الحساب معطل. تواصل مع مدير النظام.",
 };
 
 export function Login() {
@@ -77,62 +39,15 @@ export function Login() {
   const user = useSelector((state: RootState) => state.auth.user);
   const status = useSelector((state: RootState) => state.auth.status);
   const error = useSelector((state: RootState) => state.auth.error);
-  const roles = useSelector((state: RootState) => state.auth.roles);
-  const serviceDivisions = useSelector(
-    (state: RootState) => state.auth.serviceDivisions,
-  );
-  const optionsStatus = useSelector(
-    (state: RootState) => state.auth.optionsStatus,
-  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("");
-  const [department, setDepartment] = useState("");
-
-  useEffect(() => {
-    dispatch(fetchAuthOptions());
-  }, [dispatch]);
-
-  useEffect(() => {
-    if (!role && roles.length > 0) setRole(roles[0]);
-
-    // Department is only relevant for staff members; admins have access across divisions.
-    if (role === "staff") {
-      if (!department && serviceDivisions.length > 0)
-        setDepartment(serviceDivisions[0]);
-    } else {
-      setDepartment("");
-    }
-  }, [roles, serviceDivisions, role, department]);
-
-  const navigate = useNavigate();
-
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    // Staff must supply a division; admins log in without a division restriction.
-    const credentials = {
-      email,
-      password,
-      role,
-      ...(role === "staff" ? { department } : {}),
-    };
-
-    const result = await dispatch(loginUser(credentials));
-    if (loginUser.fulfilled.match(result)) {
-      setPassword("");
-      //navigate("/moh/editor");
-    }
+    // The server decides the role and the divisions of the account
+    const result = await dispatch(loginUser({ email, password }));
+    if (loginUser.fulfilled.match(result)) setPassword("");
   }
-
-  const labelFor = (
-    map: Record<string, { en: string; ar: string }>,
-    key: string,
-  ) => {
-    const entry = map[key];
-    if (entry) return isArabic ? entry.ar : entry.en;
-    return key;
-  };
 
   return (
     <>
@@ -199,8 +114,6 @@ export function Login() {
                       dispatch(logout());
                       setEmail("");
                       setPassword("");
-                      setRole("");
-                      setDepartment("");
                     }}
                   >
                     <LogOut aria-hidden="true" />
@@ -254,83 +167,6 @@ export function Login() {
                       />
                     </Field>
 
-                    <Field className="space-y-2">
-                      <FieldLabel
-                        htmlFor="role"
-                        className="text-sm font-medium leading-none"
-                      >
-                        {isArabic ? "الدور" : "Role"}
-                      </FieldLabel>
-                      <Select
-                        value={role}
-                        onValueChange={(value) => setRole(value ?? "")}
-                        disabled={optionsStatus === "loading"}
-                      >
-                        <SelectTrigger id="role" className="w-full">
-                          <SelectValue
-                            placeholder={isArabic ? "اختر الدور" : "Select role"}
-                          >
-                            {role ? labelFor(roleLabels, role) : undefined}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>
-                              {isArabic ? "الأدوار المتاحة" : "Available Roles"}
-                            </SelectLabel>
-                            {roles.map((r) => (
-                              <SelectItem key={r} value={r}>
-                                {labelFor(roleLabels, r)}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-
-                    {role === "staff" && (
-                      <Field className="space-y-2">
-                        <FieldLabel
-                          htmlFor="department"
-                          className="text-sm font-medium leading-none"
-                        >
-                          {isArabic ? "القسم / الشعبة" : "Service Division"}
-                        </FieldLabel>
-                        <Select
-                          value={department}
-                          onValueChange={(value) => setDepartment(value ?? "")}
-                          disabled={optionsStatus === "loading"}
-                        >
-                          <SelectTrigger id="department" className="w-full">
-                            <SelectValue
-                              placeholder={isArabic ? "اختر الدور" : "Select role"}
-                            >
-                              {department ? labelFor(divisionLabels, department) : undefined}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectGroup>
-                              <SelectLabel>
-                                {isArabic
-                                  ? "الأقسام المتاحة"
-                                  : "Available Service Divisions"}
-                              </SelectLabel>
-                              {serviceDivisions.map((d) => (
-                                <SelectItem key={d} value={d}>
-                                  {labelFor(divisionLabels, d)}
-                                </SelectItem>
-                              ))}
-                            </SelectGroup>
-                          </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">
-                          {isArabic
-                            ? "يُطلب من موظفي القسم اختيار شعبة انتمائهم."
-                            : "Staff members must select their service division."}
-                        </p>
-                      </Field>
-                    )}
-
                     {error && (
                       <p
                         role="alert"
@@ -346,7 +182,7 @@ export function Login() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={status === "loading" || optionsStatus === "loading"}
+                    disabled={status === "loading"}
                   >
                     {status === "loading"
                       ? isArabic

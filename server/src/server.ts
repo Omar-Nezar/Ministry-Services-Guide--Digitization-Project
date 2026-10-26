@@ -2,6 +2,7 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
+import adminRouter from "./routes/admin.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import editorRouter from "./routes/editor.routes.js";
 import guideRouter from "./routes/guide.routes.js";
@@ -21,6 +22,7 @@ app.get("/", (_request, response) => {
 
 // Routes
 app.use("/auth", authRouter);
+app.use("/admin", adminRouter);
 app.use("/guide", guideRouter);
 app.use("/editor", editorRouter);
 

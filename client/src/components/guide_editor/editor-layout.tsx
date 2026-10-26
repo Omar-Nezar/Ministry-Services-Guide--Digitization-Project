@@ -25,6 +25,7 @@ export const editorPaths = {
   home: "/moh/editor",
   service: (id: number) => `/moh/editor/service/${id}`,
   labels: "/moh/editor/labels",
+  staff: "/moh/editor/staff",
 };
 
 /** The services editor: the site header, the category/service tree, and the open page. */
@@ -92,11 +93,16 @@ export function EditorLayout() {
           <span className="me-2 text-sm font-semibold">{isArabic ? "محرر دليل الخدمات" : "Services guide editor"}</span>
           <nav className="flex items-center gap-1" aria-label={isArabic ? "المحرر" : "Editor"}>
             <NavLink to={editorPaths.home} end className={navClass}>
-              {isArabic ? "الخدمات" : "Services"}
+              {isAdmin ? (isArabic ? "لوحة التحكم" : "Dashboard") : isArabic ? "الخدمات" : "Services"}
             </NavLink>
             <NavLink to={editorPaths.labels} className={navClass}>
               {isArabic ? "العناوين والألوان" : "Labels & colours"}
             </NavLink>
+            {isAdmin && (
+              <NavLink to={editorPaths.staff} className={navClass}>
+                {isArabic ? "الموظفون" : "Staff"}
+              </NavLink>
+            )}
           </nav>
           <div className="ms-auto flex items-center gap-2 text-sm text-muted-foreground">
             <span className="max-sm:hidden">{user?.name}</span>

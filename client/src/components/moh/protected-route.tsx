@@ -7,5 +7,6 @@ import type { RootState } from "@/store/store";
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const user = useSelector((state: RootState) => state.auth.user);
   const allowed = user?.roles.some((role) => role === "admin" || role === "staff");
-  return allowed ? children : <Navigate to="/moh/login" replace />;
+  if (!allowed) return <Navigate to="/moh/login" replace />;
+  return children;
 }
