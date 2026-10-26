@@ -7,12 +7,17 @@ export type AuthUser = {
   email: string;
   roles: string[];
   departments: string[];
+  token: string;
 };
 
 type AuthState = {
   user: AuthUser | null;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  roles: string[];
+  serviceDivisions: string[];
+  optionsStatus: "idle" | "loading" | "succeeded" | "failed";
+  optionsError: string | null;
 };
 
 type LoginCredentials = {
@@ -26,6 +31,10 @@ const initialState: AuthState = {
   user: null,
   status: "idle",
   error: null,
+  roles: [],
+  serviceDivisions: [],
+  optionsStatus: "idle",
+  optionsError: null,
 };
 
 function isAuthUser(value: unknown): value is AuthUser {
@@ -38,6 +47,8 @@ function isAuthUser(value: unknown): value is AuthUser {
     typeof user.id === "number" &&
     typeof user.name === "string" &&
     typeof user.email === "string" &&
+    typeof user.token === "string" &&
+    user.token.length > 0 &&
     Array.isArray(user.roles) &&
     user.roles.every((role: unknown) => typeof role === "string") &&
     Array.isArray(user.departments) &&
@@ -90,6 +101,43 @@ export const loginUser = createAsyncThunk<
   }
 });
 
+export const fetchAuthOptions = createAsyncThunk<
+  { roles: string[]; serviceDivisions: string[] },
+  void,
+  { rejectValue: string }
+>("auth/fetchOptions", async (_, { rejectWithValue }) => {
+  try {
+    const response = await fetch(`${apiBaseUrl}/auth/options`);
+    const payload: unknown = await response.json();
+
+    if (!response.ok) {
+      return rejectWithValue(
+        getApiError(payload) ?? "Unable to load options right now.",
+      );
+    }
+
+    if (
+      typeof payload !== "object" ||
+      payload === null ||
+      !Array.isArray((payload as Record<string, unknown>).roles) ||
+      !Array.isArray((payload as Record<string, unknown>).serviceDivisions)
+    ) {
+      return rejectWithValue("The server returned an unexpected response.");
+    }
+
+    return {
+      roles: (payload as Record<string, unknown>).roles as string[],
+      serviceDivisions: (payload as Record<string, unknown>)
+        .serviceDivisions as string[],
+    };
+  } catch (error: unknown) {
+    console.error("Unable to reach the options service.", error);
+    return rejectWithValue(
+      "Unable to reach the server. Check that the API is running.",
+    );
+  }
+});
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -115,6 +163,21 @@ const authSlice = createSlice({
         state.status = "failed";
         state.error =
           action.payload ?? "Unable to sign in. Please try again.";
+      })
+      .addCase(fetchAuthOptions.pending, (state) => {
+        state.optionsStatus = "loading";
+        state.optionsError = null;
+      })
+      .addCase(fetchAuthOptions.fulfilled, (state, action) => {
+        state.optionsStatus = "succeeded";
+        state.roles = action.payload.roles;
+        state.serviceDivisions = action.payload.serviceDivisions;
+        state.optionsError = null;
+      })
+      .addCase(fetchAuthOptions.rejected, (state, action) => {
+        state.optionsStatus = "failed";
+        state.optionsError =
+          action.payload ?? "Unable to load options right now.";
       });
   },
 });

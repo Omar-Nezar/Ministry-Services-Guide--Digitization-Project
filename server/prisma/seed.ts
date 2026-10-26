@@ -2,6 +2,7 @@ import "dotenv/config";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { hashPassword } from "@/utils/password.js";
 
 const prisma = new PrismaClient();
 
@@ -84,6 +85,92 @@ async function seedServices(file = DATA_FILE): Promise<void> {
   console.log(`Services: ${created} new, ${updated} updated.`);
 }
 
+// ---------------------------------------------------------------------------
+// TEST USER SEEDING — isolated, easily removable (development/testing only)
+// Set SEED_TEST_USERS = false or delete this block to disable.
+// ---------------------------------------------------------------------------
+const SEED_TEST_USERS = true;
+
+interface TestUser {
+  name: string;
+  email: string;
+  password: string;
+  division: string;
+}
+
+const testUsers: TestUser[] = [
+  {
+    name: "Ahmed Al-Mansouri",
+    email: "ahmed.mansouri@moh.gov",
+    password: "StaffPass123!",
+    division: "Lands",
+  },
+  {
+    name: "Fatima Al-Rashid",
+    email: "fatima.rashid@moh.gov",
+    password: "StaffPass123!",
+    division: "Real Estate Registry",
+  },
+  {
+    name: "Omar Al-Nuaimi",
+    email: "omar.nuaimi@moh.gov",
+    password: "StaffPass123!",
+    division: "Urban Planning",
+  },
+  {
+    name: "Sara Al-Falasi",
+    email: "sara.falasi@moh.gov",
+    password: "StaffPass123!",
+    division: "Client Services",
+  },
+];
+
+async function seedTestUsers(): Promise<void> {
+  if (!SEED_TEST_USERS) return;
+
+  const staffRole = await prisma.role.findUnique({ where: { name: "staff" } });
+  if (!staffRole) {
+    console.log("  Skipping test users: 'staff' role not found.");
+    return;
+  }
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const u of testUsers) {
+    const division = await prisma.serviceDivision.findUnique({
+      where: { name: u.division },
+    });
+    if (!division) {
+      console.log(`  Skipping ${u.email}: division "${u.division}" not found.`);
+      skipped++;
+      continue;
+    }
+
+    const existing = await prisma.user.findUnique({ where: { email: u.email } });
+    if (existing) {
+      console.log(`  Skipping ${u.email}: already exists.`);
+      skipped++;
+      continue;
+    }
+
+    const passwordHash = await hashPassword(u.password);
+
+    await prisma.user.create({
+      data: {
+        name: u.name,
+        email: u.email,
+        passwordHash,
+        roles: { create: { roleId: staffRole.id } },
+        serviceDivisions: { create: { serviceDivisionId: division.id } },
+      },
+    });
+    created++;
+  }
+
+  console.log(`Test users: ${created} created, ${skipped} skipped.`);
+}
+
 async function main() {
   for (const name of roles) {
     await prisma.role.upsert({
@@ -102,6 +189,8 @@ async function main() {
   }
 
   await seedServices();
+
+  await seedTestUsers();
 }
 
 main()

@@ -1,6 +1,6 @@
 import { useEffect, useState, type SubmitEvent } from "react";
 import { ArrowLeft, LogOut } from "lucide-react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { Header } from "@/components/general/header";
 import { useLanguage } from "@/components/settings/language-context";
@@ -24,9 +24,11 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
 } from "@/components/ui/select";
 import {
   loginUser,
+  fetchAuthOptions,
   logout,
 } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
@@ -75,54 +77,51 @@ export function Login() {
   const user = useSelector((state: RootState) => state.auth.user);
   const status = useSelector((state: RootState) => state.auth.status);
   const error = useSelector((state: RootState) => state.auth.error);
+  const roles = useSelector((state: RootState) => state.auth.roles);
+  const serviceDivisions = useSelector(
+    (state: RootState) => state.auth.serviceDivisions,
+  );
+  const optionsStatus = useSelector(
+    (state: RootState) => state.auth.optionsStatus,
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [department, setDepartment] = useState("");
-  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
-  const [availableDivisions, setAvailableDivisions] = useState<string[]>([]);
-  const [optionsLoading, setOptionsLoading] = useState(true);
 
   useEffect(() => {
-    async function loadOptions() {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3001"}/auth/options`,
-        );
-        const data = await res.json();
-        if (Array.isArray(data.roles)) setAvailableRoles(data.roles);
-        if (Array.isArray(data.serviceDivisions))
-          setAvailableDivisions(data.serviceDivisions);
-      } catch {
-        setAvailableRoles(["admin", "staff"]);
-        setAvailableDivisions([
-          "Real Estate Registry",
-          "Lands",
-          "Social Housing and Projects",
-          "Urban Planning",
-          "Real Estate Development",
-          "Real Estate Brokerage",
-          "Client Services",
-          "IT",
-        ]);
-      } finally {
-        setOptionsLoading(false);
-      }
+    dispatch(fetchAuthOptions());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!role && roles.length > 0) setRole(roles[0]);
+
+    // Department is only relevant for staff members; admins have access across divisions.
+    if (role === "staff") {
+      if (!department && serviceDivisions.length > 0)
+        setDepartment(serviceDivisions[0]);
+    } else {
+      setDepartment("");
     }
-    loadOptions();
-  }, []);
+  }, [roles, serviceDivisions, role, department]);
 
-  useEffect(() => {
-    if (!role && availableRoles.length > 0) setRole(availableRoles[0]);
-    if (!department && availableDivisions.length > 0)
-      setDepartment(availableDivisions[0]);
-  }, [availableRoles, availableDivisions, role, department]);
+  const navigate = useNavigate();
 
   async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const result = await dispatch(loginUser({ email, password, role, department }));
+
+    // Staff must supply a division; admins log in without a division restriction.
+    const credentials = {
+      email,
+      password,
+      role,
+      ...(role === "staff" ? { department } : {}),
+    };
+
+    const result = await dispatch(loginUser(credentials));
     if (loginUser.fulfilled.match(result)) {
       setPassword("");
+      //navigate("/moh/editor");
     }
   }
 
@@ -171,11 +170,20 @@ export function Login() {
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">{user.email}</p>
                     <p className="mt-3 text-sm text-muted-foreground">
-                      {user.roles.join(", ") ||
-                        (isArabic ? "لم يتم تعيين دور" : "No role assigned")}
-                      {user.departments.length > 0 &&
-                        ` · ${user.departments.join(", ")}`}
+                      {isArabic ? "الأدوار:" : "Roles:"}
+                      <span className="ml-2 font-medium">
+                        {user.roles.join(", ") ||
+                          (isArabic ? "لم يتم تعيين دور" : "No role assigned")}
+                      </span>
                     </p>
+                    {user.departments.length > 0 && (
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {isArabic ? "الشعب:" : "Service Divisions:"}
+                        <span className="ml-2 font-medium">
+                          {user.departments.join(", ")}
+                        </span>
+                      </p>
+                    )}
                   </div>
                   <Link
                     to="/moh/editor"
@@ -191,6 +199,8 @@ export function Login() {
                       dispatch(logout());
                       setEmail("");
                       setPassword("");
+                      setRole("");
+                      setDepartment("");
                     }}
                   >
                     <LogOut aria-hidden="true" />
@@ -212,6 +222,8 @@ export function Login() {
                         name="email"
                         type="email"
                         autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         required
                         value={email}
                         onChange={(event) => setEmail(event.target.value)}
@@ -231,7 +243,10 @@ export function Login() {
                         id="password"
                         name="password"
                         type="password"
+                        placeholder={isArabic ? "أدخل كلمة المرور" : "Enter your password"}
                         autoComplete="current-password"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         required
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
@@ -247,65 +262,74 @@ export function Login() {
                         {isArabic ? "الدور" : "Role"}
                       </FieldLabel>
                       <Select
-                        id="role"
                         value={role}
-                        onValueChange={setRole}
-                        className="w-full"
-                        disabled={optionsLoading}
+                        onValueChange={(value) => setRole(value ?? "")}
+                        disabled={optionsStatus === "loading"}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger id="role" className="w-full">
                           <SelectValue
-                            placeholder={
-                              isArabic ? "اختر الدور" : "Select role"
-                            }
-                          />
+                            placeholder={isArabic ? "اختر الدور" : "Select role"}
+                          >
+                            {role ? labelFor(roleLabels, role) : undefined}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectLabel>
-                            {isArabic ? "الأدوار المتاحة" : "Available Roles"}
-                          </SelectLabel>
-                          {availableRoles.map((r) => (
-                            <SelectItem key={r} value={r}>
-                              {labelFor(roleLabels, r)}
-                            </SelectItem>
-                          ))}
+                          <SelectGroup>
+                            <SelectLabel>
+                              {isArabic ? "الأدوار المتاحة" : "Available Roles"}
+                            </SelectLabel>
+                            {roles.map((r) => (
+                              <SelectItem key={r} value={r}>
+                                {labelFor(roleLabels, r)}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
                         </SelectContent>
                       </Select>
                     </Field>
 
-                    <Field className="space-y-2">
-                      <FieldLabel
-                        htmlFor="department"
-                        className="text-sm font-medium leading-none"
-                      >
-                        {isArabic ? "القسم" : "Department"}
-                      </FieldLabel>
-                      <Select
-                        id="department"
-                        value={department}
-                        onValueChange={setDepartment}
-                        className="w-full"
-                        disabled={optionsLoading}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue
-                            placeholder={
-                              isArabic ? "اختر القسم" : "Select department"
-                            }
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectLabel>
-                            {isArabic ? "الأقسام المتاحة" : "Available Departments"}
-                          </SelectLabel>
-                          {availableDivisions.map((d) => (
-                            <SelectItem key={d} value={d}>
-                              {labelFor(divisionLabels, d)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
+                    {role === "staff" && (
+                      <Field className="space-y-2">
+                        <FieldLabel
+                          htmlFor="department"
+                          className="text-sm font-medium leading-none"
+                        >
+                          {isArabic ? "القسم / الشعبة" : "Service Division"}
+                        </FieldLabel>
+                        <Select
+                          value={department}
+                          onValueChange={(value) => setDepartment(value ?? "")}
+                          disabled={optionsStatus === "loading"}
+                        >
+                          <SelectTrigger id="department" className="w-full">
+                            <SelectValue
+                              placeholder={isArabic ? "اختر الدور" : "Select role"}
+                            >
+                              {department ? labelFor(divisionLabels, department) : undefined}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectGroup>
+                              <SelectLabel>
+                                {isArabic
+                                  ? "الأقسام المتاحة"
+                                  : "Available Service Divisions"}
+                              </SelectLabel>
+                              {serviceDivisions.map((d) => (
+                                <SelectItem key={d} value={d}>
+                                  {labelFor(divisionLabels, d)}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {isArabic
+                            ? "يُطلب من موظفي القسم اختيار شعبة انتمائهم."
+                            : "Staff members must select their service division."}
+                        </p>
+                      </Field>
+                    )}
 
                     {error && (
                       <p
@@ -322,7 +346,7 @@ export function Login() {
                   <Button
                     type="submit"
                     className="w-full"
-                    disabled={status === "loading" || optionsLoading}
+                    disabled={status === "loading" || optionsStatus === "loading"}
                   >
                     {status === "loading"
                       ? isArabic
