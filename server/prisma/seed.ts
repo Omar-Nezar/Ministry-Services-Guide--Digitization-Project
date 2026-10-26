@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { hashPassword } from "@/utils/password.js";
+import { seedSectionLabels } from "./seed/section-labels.js";
 
 const prisma = new PrismaClient();
 

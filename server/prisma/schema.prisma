@@ -39,14 +39,17 @@ model Role {
 }
 
 model ServiceDivision {
-  id        Int                   @id @default(autoincrement())
-  name      String                @unique @db.NVarChar(150)
+  id          Int                   @id @default(autoincrement())
+  name        String                @unique @db.NVarChar(150)
   /// Arabic name; the converter's --category must match it (or the English name)
-  nameAr    String?               @db.NVarChar(150)
-  order     Int                   @default(0)
-  createdAt DateTime              @default(now())
-  users     UserServiceDivision[]
-  services  Service[]
+  nameAr      String?               @db.NVarChar(150)
+  order       Int                   @default(0)
+  /// Category colour: the colour of its services' labels (hex, e.g. #074169)
+  color       String?               @db.NVarChar(20)
+  createdAt   DateTime              @default(now())
+  users       UserServiceDivision[]
+  services    Service[]
+  labelColors DivisionLabelColor[]
 
   @@map("service_divisions")
 }
@@ -114,7 +117,9 @@ model Service {
   order             Int              @default(0)
   /// The documentation, one row per section
   sections          ServiceSection[]
-  flowchart         Flowchart?
+  /// A service can have several flowcharts
+  flowcharts        Flowchart[]
+  images            ServiceImage[]
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -137,12 +142,58 @@ model ServiceSection {
   @@unique([serviceId, key])
 }
 
-/// The service's flowchart as JSON text (SQL Server has no JSON column in
-/// Prisma). Added later; push.js never changes it.
+/// A flowchart of a service, as JSON text (SQL Server has no JSON column in
+/// Prisma). A service can have several. push.js never changes them.
 model Flowchart {
+  id         Int      @id @default(autoincrement())
+  serviceId  Int
+  service    Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  /// Shown above the diagram (the Excel sheet name by default)
+  title      String?  @db.NVarChar(400)
+  /// Order among the service's flowcharts
+  order      Int      @default(0)
+  /// The Excel file it came from; pushing that file again replaces only these
+  sourceFile String?  @db.NVarChar(400)
+  json       String   @db.NVarChar(Max)
+  updatedAt  DateTime @updatedAt
+
+  @@index([serviceId])
+}
+
+/// A picture page of a service, uploaded in the editor (file kept in server/uploads).
+model ServiceImage {
   id        Int      @id @default(autoincrement())
-  serviceId Int      @unique
+  serviceId Int
   service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-  json      String   @db.NVarChar(Max)
-  updatedAt DateTime @updatedAt
+  /// Path under the server's /uploads, e.g. uploads/123-456.png
+  imagePath String   @db.NVarChar(400)
+  /// contain | cover
+  imageFit  String   @default("contain") @db.VarChar(20)
+  caption   String?  @db.NVarChar(400)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([serviceId])
+}
+
+/// The shared labels of the documentation (وصف الخدمة, الرسوم, ...): their name and
+/// order apply to every service. `key` is ServiceSection.key.
+model SectionLabel {
+  id     Int                  @id @default(autoincrement())
+  key    String               @unique @db.VarChar(40)
+  name   String               @db.NVarChar(200)
+  order  Int                  @default(0)
+  colors DivisionLabelColor[]
+}
+
+/// A category's own colour for one label (overrides ServiceDivision.color).
+model DivisionLabelColor {
+  id                Int             @id @default(autoincrement())
+  serviceDivisionId Int
+  serviceDivision   ServiceDivision @relation(fields: [serviceDivisionId], references: [id], onDelete: Cascade)
+  labelId           Int
+  label             SectionLabel    @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  color             String          @db.NVarChar(20)
+
+  @@unique([serviceDivisionId, labelId])
 }

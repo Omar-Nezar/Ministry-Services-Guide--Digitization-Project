@@ -368,3 +368,73 @@
   outline: 2px solid #7f7f7f;
   outline-offset: 2px;
 }
+/* ============================================================================
+   Services guide: the text of a label, in the editor and in the read-only guide
+   (Tiptap html and the html from the Word files)
+   ============================================================================ */
+.rich-content {
+  line-height: 1.8;
+  font-size: 0.95rem;
+}
+.rich-content p {
+  margin: 0.15rem 0;
+}
+.rich-content ul {
+  list-style: disc;
+  padding-inline-start: 1.4rem;
+}
+.rich-content ol {
+  list-style: decimal;
+  padding-inline-start: 1.4rem;
+}
+.rich-content li + li {
+  margin-top: 0.2rem;
+}
+.rich-content li::marker {
+  color: var(--secondary-sand);
+}
+.rich-content li > p {
+  margin: 0;
+}
+.rich-content mark {
+  border-radius: 0.2rem;
+  padding: 0 0.15rem;
+  color: inherit;
+}
+.rich-content h1,
+.rich-content h2,
+.rich-content h3,
+.rich-content h4 {
+  font-weight: 700;
+  margin: 0.4rem 0 0.2rem;
+}
+.rich-content a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rich-content .important {
+  color: var(--destructive);
+}
+.rich-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.rich-content td,
+.rich-content th {
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  vertical-align: top;
+}
+.rich-content th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.rich-content .ProseMirror {
+  outline: none;
+  min-height: 3rem;
+}
+.rich-content .ProseMirror .selectedCell {
+  background: color-mix(in oklch, var(--primary) 12%, transparent);
+}

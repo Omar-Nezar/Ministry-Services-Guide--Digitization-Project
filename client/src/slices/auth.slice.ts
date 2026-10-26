@@ -27,8 +27,30 @@ type LoginCredentials = {
   department?: string;
 };
 
+const USER_STORAGE_KEY = "ministry-services-user";
+
+// The signed-in user survives a page reload for the length of the browser tab
+function loadStoredUser(): AuthUser | null {
+  try {
+    const stored = sessionStorage.getItem(USER_STORAGE_KEY);
+    const user: unknown = stored ? JSON.parse(stored) : null;
+    return isAuthUser(user) ? user : null;
+  } catch {
+    return null;
+  }
+}
+
+function storeUser(user: AuthUser | null) {
+  try {
+    if (user) sessionStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(USER_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Unable to save the signed-in user.", error);
+  }
+}
+
 const initialState: AuthState = {
-  user: null,
+  user: loadStoredUser(),
   status: "idle",
   error: null,
   roles: [],
@@ -129,6 +151,7 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout(state) {
+      storeUser(null);
       state.user = null;
       state.status = "idle";
       state.error = null;
@@ -142,6 +165,7 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.status = "succeeded";
+        storeUser(action.payload);
         state.user = action.payload;
         state.error = null;
       })
