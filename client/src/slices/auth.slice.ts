@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { apiBaseUrl } from "./base";
+import api from "./base";
 
 export type AuthUser = {
   id: number;
@@ -74,18 +74,8 @@ export const loginUser = createAsyncThunk<
   { rejectValue: string }
 >("auth/login", async (credentials, { rejectWithValue }) => {
   try {
-    const response = await fetch(`${apiBaseUrl}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(credentials),
-    });
-    const payload: unknown = await response.json();
-
-    if (!response.ok) {
-      return rejectWithValue(
-        getApiError(payload) ?? "Unable to sign in. Please try again.",
-      );
-    }
+    const response = await api.post("/auth/login", credentials);
+    const payload = response.data;
 
     if (!isAuthUser(payload)) {
       console.error("Login API returned an invalid user response.", payload);
@@ -93,10 +83,11 @@ export const loginUser = createAsyncThunk<
     }
 
     return payload;
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Unable to reach the login service.", error);
+    const errorData = error.response?.data;
     return rejectWithValue(
-      "Unable to reach the server. Check that the API is running.",
+      getApiError(errorData) ?? "Unable to reach the server. Check that the API is running.",
     );
   }
 });
@@ -107,14 +98,8 @@ export const fetchAuthOptions = createAsyncThunk<
   { rejectValue: string }
 >("auth/fetchOptions", async (_, { rejectWithValue }) => {
   try {
-    const response = await fetch(`${apiBaseUrl}/auth/options`);
-    const payload: unknown = await response.json();
-
-    if (!response.ok) {
-      return rejectWithValue(
-        getApiError(payload) ?? "Unable to load options right now.",
-      );
-    }
+    const response = await api.get("/auth/options");
+    const payload = response.data;
 
     if (
       typeof payload !== "object" ||
@@ -130,10 +115,11 @@ export const fetchAuthOptions = createAsyncThunk<
       serviceDivisions: (payload as Record<string, unknown>)
         .serviceDivisions as string[],
     };
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Unable to reach the options service.", error);
+    const errorData = error.response?.data;
     return rejectWithValue(
-      "Unable to reach the server. Check that the API is running.",
+      getApiError(errorData) ?? "Unable to reach the server. Check that the API is running.",
     );
   }
 });
