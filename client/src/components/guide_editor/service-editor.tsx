@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
-import { ArrowDown, ArrowUp, Check, ImagePlus, Loader2, Trash2, Workflow } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, FileDown, ImagePlus, Loader2, Trash2, Workflow } from "lucide-react";
 import { newDoc, normalize } from "@/components/flowchart/diagram";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Tip } from "@/components/ui/tip";
 import { apiErrorMessage, editorApi, type EditorFlowchart, type EditorService, type GuideImage } from "@/lib/guide-api";
 import { DiagramEditor } from "./diagram-editor";
 import { EntryRow } from "./entry-row";
+import { downloadDocx } from "./export-docx";
 import type { EditorContext } from "./editor-layout";
 import { ImageEditor } from "./image-editor";
 
@@ -32,6 +33,8 @@ export function ServiceEditor() {
   const [version, setVersion] = useState(0);
 
   const pending = useRef(new Map<string, () => Promise<unknown>>());
+  // The text of the labels edited since the service was loaded (the Word export reads it)
+  const typed = useRef(new Map<string, string>());
   const [count, setCount] = useState(0);
   const [saveState, setSaveState] = useState<SaveState>("idle");
 
@@ -50,6 +53,7 @@ export function ServiceEditor() {
     let current = true;
     setError(null);
     pending.current.clear();
+    typed.current.clear();
     setCount(0);
     editorApi
       .service(Number(serviceId))
@@ -183,8 +187,17 @@ export function ServiceEditor() {
         <p className="text-sm font-medium text-muted-foreground">
           {isArabic ? (service.serviceDivision.nameAr ?? service.serviceDivision.name) : service.serviceDivision.name}
         </p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="ms-auto"
+          onClick={() => void downloadDocx(name.trim() || service.name, service.labels.map((l) => ({ ...l, html: typed.current.get(l.key) ?? l.html })))}
+        >
+          <FileDown /> {t("تصدير Word", "Export Word")}
+        </Button>
         {editable && (
-          <div className="ms-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground" aria-live="polite">
               {saveState === "saving" ? (
                 <span className="inline-flex items-center gap-1">
@@ -229,7 +242,14 @@ export function ServiceEditor() {
         />
         <div className="flex flex-col gap-1.5">
           {service.labels.map((label) => (
-            <EntryRow key={keyOf(label.key)} serviceId={service.id} label={label} disabled={!editable} onDirty={markDirty} />
+            <EntryRow
+              key={keyOf(label.key)}
+              serviceId={service.id}
+              label={label}
+              disabled={!editable}
+              onDirty={markDirty}
+              onText={(key, html) => typed.current.set(key, html)}
+            />
           ))}
         </div>
       </section>

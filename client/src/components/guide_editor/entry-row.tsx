@@ -7,10 +7,12 @@ type Props = {
   disabled: boolean;
   /** Registers this row's unsaved text; the page's Save button runs `save` */
   onDirty: (key: string, save: () => Promise<unknown>) => void;
+  /** The text as typed, for the page's Word export */
+  onText: (key: string, html: string) => void;
 };
 
 /** One table row: the label cell (right side in Arabic) and its text. Nothing is stored until Save is pressed. */
-export function EntryRow({ serviceId, label, disabled, onDirty }: Props) {
+export function EntryRow({ serviceId, label, disabled, onDirty, onText }: Props) {
   return (
     <div className="flex overflow-hidden rounded-md border bg-card" dir="rtl">
       <div
@@ -23,7 +25,10 @@ export function EntryRow({ serviceId, label, disabled, onDirty }: Props) {
         <RichEditor
           html={label.html}
           disabled={disabled}
-          onChange={(html) => onDirty(`section-${label.key}`, () => editorApi.saveSection(serviceId, label.key, html))}
+          onChange={(html) => {
+            onText(label.key, html);
+            onDirty(`section-${label.key}`, () => editorApi.saveSection(serviceId, label.key, html));
+          }}
         />
       </div>
     </div>
