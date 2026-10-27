@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Copy, Link2, Minus, Plus, Redo2, Trash2, Undo2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, Download, Link2, Minus, Plus, Redo2, Trash2, Undo2, Upload } from "lucide-react";
 import { editorApi, type EditorFlowchart } from "@/lib/guide-api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Drawing } from "@/components/flowchart/copy-canvas";
+import { exportDiagramXlsx } from "@/components/flowchart/export-xlsx";
 import {
   SHAPE_KINDS, SNAP, bodyTop, laneAt, laneLeft, makeLane, makeLine, makeShape, makeText, normalize, parseDoc, relayout, sheetsOf, snap, uid,
   type ShapeKind,
@@ -272,6 +273,14 @@ export function DiagramEditor({ flowchart, onDirty }: { flowchart: EditorFlowcha
                 e.target.value = "";
               }}
             />
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={!doc.shapes.length}
+            onClick={() => exportDiagramXlsx(docRef.current, titleRef.current.trim()).catch(() => alert("تعذر تصدير الملف."))}
+          >
+            <Download /> تصدير Excel
           </Button>
           <Button size="icon-sm" variant="ghost" aria-label="تراجع" disabled={!undo.current.length} onClick={() => stepHistory(undo, redo)}>
             <Undo2 />
