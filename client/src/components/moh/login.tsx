@@ -104,7 +104,7 @@ export function Login() {
                     to="/moh/editor"
                     className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {isArabic ? "فتح محرر دليل الخدمات" : "Open the services guide editor"}
+                    {isArabic ? "فتح محرر دليل الخدمات" : "Open the services catalogue editor"}
                   </Link>
                   <Button
                     type="button"

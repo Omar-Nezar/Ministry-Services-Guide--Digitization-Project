@@ -90,7 +90,7 @@ export function EditorLayout() {
       <Header />
       <div className="border-b bg-card">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-2 px-4 py-2 lg:px-6">
-          <span className="me-2 text-sm font-semibold">{isArabic ? "محرر دليل الخدمات" : "Services guide editor"}</span>
+          <span className="me-2 text-sm font-semibold">{isArabic ? "محرر دليل الخدمات" : "Services catalogue editor"}</span>
           <nav className="flex items-center gap-1" aria-label={isArabic ? "المحرر" : "Editor"}>
             <NavLink to={editorPaths.home} end className={navClass}>
               {isAdmin ? (isArabic ? "لوحة التحكم" : "Dashboard") : isArabic ? "الخدمات" : "Services"}

@@ -58,7 +58,7 @@ export function Home() {
               {isArabic ? "وزارة الإسكان" : "Ministry of Housing"}
             </p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
-              {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Guide"}
+              {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Catalogue"}
             </h1>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted-foreground">
               {isArabic
@@ -122,7 +122,7 @@ export function Home() {
           <footer className="mt-12 text-center text-sm text-muted-foreground">
             {isArabic
               ? "وزارة الإسكان · دليل الخدمات"
-              : "Ministry of Housing · Services Guide"}
+              : "Ministry of Housing · Services Catalogue"}
           </footer>
         </div>
       </main>
