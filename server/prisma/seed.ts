@@ -169,48 +169,61 @@ interface TestUser {
   email: string;
   password: string;
   division: string;
+  role: "staff" | "admin";
 }
 
 const testUsers: TestUser[] = [
+  {
+    name: "Admin User",
+    email: "admin@moh.gov",
+    password: "Admin123",
+    division: "IT",
+    role: "admin",
+  },
   {
     name: "Ahmed Al-Mansouri",
     email: "ahmed.mansouri@moh.gov",
     password: "StaffPass123!",
     division: "Lands",
+    role: "staff",
   },
   {
     name: "Fatima Al-Rashid",
     email: "fatima.rashid@moh.gov",
     password: "StaffPass123!",
     division: "Real Estate Registry",
+    role: "staff",
   },
   {
     name: "Omar Al-Nuaimi",
     email: "omar.nuaimi@moh.gov",
     password: "StaffPass123!",
     division: "Urban Planning",
+    role: "staff",
   },
   {
     name: "Sara Al-Falasi",
     email: "sara.falasi@moh.gov",
     password: "StaffPass123!",
     division: "Client Services",
+    role: "staff",
   },
 ];
 
 async function seedTestUsers(): Promise<void> {
   if (!SEED_TEST_USERS) return;
 
-  const staffRole = await prisma.role.findUnique({ where: { name: "staff" } });
-  if (!staffRole) {
-    console.log("  Skipping test users: 'staff' role not found.");
-    return;
-  }
-
   let created = 0;
   let skipped = 0;
 
   for (const u of testUsers) {
+    const role = await prisma.role.findUnique({ where: { name: u.role } });
+    if (!role) {
+      console.log(`  Skipping ${u.email}: role "${u.role}" not found.`);
+      skipped++;
+      continue;
+    }
+
     const division = await prisma.serviceDivision.findUnique({
       where: { name: u.division },
     });
@@ -234,7 +247,7 @@ async function seedTestUsers(): Promise<void> {
         name: u.name,
         email: u.email,
         passwordHash,
-        roles: { create: { roleId: staffRole.id } },
+        roles: { create: { roleId: role.id } },
         serviceDivisions: { create: { serviceDivisionId: division.id } },
       },
     });
