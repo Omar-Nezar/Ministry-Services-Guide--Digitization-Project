@@ -297,6 +297,9 @@
     }
   body {
     @apply bg-background text-foreground;
+    /* Soft wash of the primary colour at the top of every page */
+    background-image: linear-gradient(to bottom, color-mix(in oklch, var(--primary) 8%, transparent), transparent 24rem);
+    background-repeat: no-repeat;
     font-family: "Geist Variable", "Noto Sans Arabic", "Segoe UI", sans-serif;
     }
   html {

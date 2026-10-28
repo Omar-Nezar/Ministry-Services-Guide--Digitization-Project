@@ -27,7 +27,7 @@ export function GuideLayout() {
   const context: GuideContext = { tree, treeError };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen text-foreground">
       <Header />
       <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 lg:flex-row lg:gap-8 lg:px-6">
         <Button
