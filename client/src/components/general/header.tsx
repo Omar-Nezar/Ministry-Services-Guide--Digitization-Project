@@ -47,7 +47,7 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
                 {isArabic ? "دليل الخدمات" : "Services Catalogue"}
               </span>
               <span className="block text-xs text-[color-mix(in_oklch,var(--secondary-accent-foreground)_75%,transparent)]">
-                {isArabic ? "وزارة الإسكان" : "Ministry of Housing"}
+                {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
               </span>
             </span>
           </Link>
