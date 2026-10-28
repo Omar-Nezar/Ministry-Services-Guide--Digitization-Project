@@ -135,8 +135,8 @@ function documentHtml(data: Loaded): string {
   const root = document.documentElement;
   return (
     `<!doctype html><html lang="ar" dir="rtl" class="${esc(root.className.replace(/\bdark\b/g, ""))}" style="${esc(root.getAttribute("style") ?? "")}">` +
-    `<head><meta charset="utf-8"><title>دليل خدمات الوزارة</title>${styles}<style>${CSS}</style></head><body>` +
-    `<div class="cover"><h1>دليل خدمات الوزارة</h1><p>وزارة الإسكان</p></div>` +
+    `<head><meta charset="utf-8"><title>دليل الخدمات</title>${styles}<style>${CSS}</style></head><body>` +
+    `<div class="cover"><h1>دليل الخدمات</h1><p>وزارة الإسكان والتخطيط العمراني</p></div>` +
     `<div class="toc"><h2>الفهرس</h2><div class="cols">${toc}</div></div>${body}</body></html>`
   );
 }
