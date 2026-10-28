@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import khanjer from "@/assets/khanjer.png";
 
 const destinations = [
   {
@@ -51,11 +52,11 @@ export function Home() {
         />
         <div className="mx-auto w-full max-w-5xl">
           <header className="mx-auto mb-12 max-w-2xl text-center">
-            <div className="mx-auto mb-5 flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
-              <Landmark aria-hidden="true" className="size-7" />
+            <div className="mx-auto mb-3 flex size-14 items-center justify-center">
+              <img src={khanjer} alt="Omani Dagger" className="h-16 w-16 object-contain" />
             </div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
-              {isArabic ? "وزارة الإسكان" : "Ministry of Housing"}
+              {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
             </p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
               {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Catalogue"}
