@@ -1,4 +1,5 @@
-import { ArrowRight, Landmark, UsersRound } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, FileDown, Landmark, UsersRound } from "lucide-react";
 import { Link } from "react-router";
 import { Header } from "@/components/general/header";
 import { useLanguage } from "@/components/settings/language-context";
@@ -41,6 +42,19 @@ const destinations = [
 
 export function Home() {
   const { isArabic } = useLanguage();
+  const [pdf, setPdf] = useState({ busy: false, failed: false, done: 0, total: 0 });
+
+  // trial: loaded on click so the pdf code stays out of the main bundle
+  async function downloadPdf() {
+    setPdf({ busy: true, failed: false, done: 0, total: 0 });
+    try {
+      const { exportGuidePdf } = await import("@/components/guide/export-pdf");
+      await exportGuidePdf((done, total) => setPdf({ busy: true, failed: false, done, total }));
+      setPdf((p) => ({ ...p, busy: false }));
+    } catch {
+      setPdf({ busy: false, failed: true, done: 0, total: 0 });
+    }
+  }
 
   return (
     <>
@@ -120,10 +134,29 @@ export function Home() {
             })}
           </section>
 
-          <footer className="mt-12 text-center text-sm text-muted-foreground">
+          <footer className="mt-12 flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
             {isArabic
               ? "وزارة الإسكان · دليل الخدمات"
               : "Ministry of Housing · Services Catalogue"}
+            <button
+              type="button"
+              onClick={downloadPdf}
+              disabled={pdf.busy}
+              className="inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-accent hover:text-foreground disabled:opacity-60"
+            >
+              <FileDown aria-hidden="true" className="size-3.5" />
+              {pdf.busy
+                ? isArabic
+                  ? `جارٍ التحضير… ${pdf.done}/${pdf.total}`
+                  : `Preparing… ${pdf.done}/${pdf.total}`
+                : pdf.failed
+                  ? isArabic
+                    ? "تعذر التصدير، حاول مجددًا"
+                    : "Export failed, try again"
+                  : isArabic
+                    ? "تصدير الدليل كاملًا PDF"
+                    : "Export full guide as PDF"}
+            </button>
           </footer>
         </div>
       </main>
