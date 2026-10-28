@@ -52,7 +52,7 @@ export function Login() {
   return (
     <>
       <Header />
-      <main className="flex min-h-[calc(100vh-4.5rem)] items-center justify-center bg-muted/40 px-4 py-12 text-foreground">
+      <main className="flex min-h-[calc(100vh-4.5rem)] items-center justify-center px-4 py-12 text-foreground">
         <div className="w-full max-w-md">
           <Link
             to="/"
