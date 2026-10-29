@@ -10,7 +10,6 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:export-seed": "tsx prisma/export-seed.ts",
     "db:seed:labels": "tsx prisma/seed-labels.ts",
-    "db:crud": "tsx src/db-crud-test.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
