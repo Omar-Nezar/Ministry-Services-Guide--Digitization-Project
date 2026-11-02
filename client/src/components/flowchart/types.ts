@@ -63,6 +63,7 @@ export type CopyDoc = {
   title?: string // big blue line above the lanes
   path?: string // gray line: مسار الخدمة / الإجراء
   time?: string // blue line: الوقت المستغرق
+  heads?: string[] // any further text lines above the lanes
 }
 
 export const isCopyDoc = (d: unknown): d is CopyDoc =>
