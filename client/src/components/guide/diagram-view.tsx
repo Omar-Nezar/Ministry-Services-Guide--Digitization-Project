@@ -10,7 +10,7 @@ import { useFetch } from "@/lib/use-fetch";
  * A flowchart, read-only, drawn as it is in Excel. It sits on a sheet like the documentation (same width, same padding)
  * and is scaled to fit inside one page height, so a big diagram never makes the guide uneven. "Full size" scrolls instead.
  */
-export function DiagramView({ id, title }: { id: number; title: string }) {
+export function DiagramView({ id, title, color }: { id: number; title: string; color?: string | null }) {
   const { isArabic } = useLanguage();
   const { data, error } = useFetch(String(id), (signal) => guideApi.flowchart(id, signal));
   const [full, setFull] = useState(false);
@@ -67,7 +67,7 @@ export function DiagramView({ id, title }: { id: number; title: string }) {
             role="img"
             aria-label={title}
           >
-            <Drawing doc={doc} />
+            <Drawing doc={doc} color={color} />
           </svg>
         </div>
       )}

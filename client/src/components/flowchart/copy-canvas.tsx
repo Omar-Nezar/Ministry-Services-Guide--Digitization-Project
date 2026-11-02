@@ -1,6 +1,8 @@
 // Copy of the converter's xlsx-reader/src/copy/CopyCanvas.tsx (the Excel viewer page):
 // draws a copy-mode diagram exactly as it was in Excel (SVG). Here only <Drawing> is used,
 // without the edit handlers, so it is read-only. Keep in step with the converter.
+import { useMemo } from "react"
+import { themeDoc } from "@/components/flowchart/diagram"
 import type { CopyCell, CopyDoc, CopyLine, CopyShape, CopyText } from "@/components/flowchart/types"
 
 type Pt = [number, number]
@@ -176,16 +178,18 @@ function CellView({ c, selected, onDown }: { c: CopyCell; selected?: boolean; on
   )
 }
 
-export function Drawing({ doc, sel, onShapeDown, onLineDown, onCellDown, onBgDown }: {
-  doc: CopyDoc; sel?: string
+export function Drawing({ doc: raw, color, sel, onShapeDown, onLineDown, onCellDown, onBgDown }: {
+  doc: CopyDoc; color?: string | null; sel?: string
   onCellDown?: (i: number, e: React.PointerEvent) => void
   onShapeDown?: (id: string, e: React.PointerEvent) => void
   onLineDown?: (id: string, e: React.PointerEvent) => void
   onBgDown?: () => void
 }) {
+  const doc = useMemo(() => themeDoc(raw, color), [raw, color])
   return (
     <>
       <rect width={doc.width} height={doc.height} fill="#ffffff" onPointerDown={onBgDown} />
+      {doc.bg?.map((c, i) => <CellView key={`bg${i}`} c={c} />)}
       {doc.cells.map((c, i) => <CellView key={i} c={c} selected={sel === `c:${i}`} onDown={onCellDown && ((e) => onCellDown(i, e))} />)}
       {doc.shapes.map((s) => <ShapeView key={s.id} s={s} selected={sel === `s:${s.id}`} onDown={onShapeDown && ((e) => onShapeDown(s.id, e))} />)}
       {doc.lines.map((l) => <LineView key={l.id} l={l} selected={sel === `l:${l.id}`} onDown={onLineDown && ((e) => onLineDown(l.id, e))} />)}

@@ -57,6 +57,8 @@ export type CopyDoc = {
   // Added by the diagram editor (readers ignore them; the drawing itself is still just `cells`).
   // When `lanes` is set the editor regenerates `cells` from these. Lanes are listed in reading order:
   // the first lane is the right-most one (the flow starts there).
+  // Set by the colour theme only (never stored): lane column backgrounds, drawn under `cells`.
+  bg?: CopyCell[]
   lanes?: CopyLane[]
   title?: string // big blue line above the lanes
   path?: string // gray line: مسار الخدمة / الإجراء

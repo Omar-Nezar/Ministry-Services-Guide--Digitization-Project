@@ -3,6 +3,7 @@ import { useParams } from "react-router";
 import { useLanguage } from "@/components/settings/language-context";
 import {
   DEFAULT_LABEL_COLOR,
+  diagramColor,
   divisionTitle,
   flowchartTitle,
   guideApi,
@@ -69,7 +70,7 @@ export function GuideService() {
               {isArabic ? "مخطط سير الإجراء" : "Procedure flowchart"}
             </h2>
             {data.flowcharts.map((f) => (
-              <DiagramView key={f.id} id={f.id} title={flowchartTitle(f, isArabic ? "مخطط سير الإجراء" : "Flowchart")} />
+              <DiagramView key={f.id} id={f.id} color={diagramColor(data)} title={flowchartTitle(f, isArabic ? "مخطط سير الإجراء" : "Flowchart")} />
             ))}
           </section>
         )}
