@@ -47,6 +47,9 @@ const PAD = 16;
 const GAP = 12;
 const COL_WIDTH = (SHEET - 2 - PAD * 2 - GAP) / 2;
 const COL_HEIGHT = 880;
+const PRINT_PAGE_WIDTH = "420mm";
+const PRINT_PAGE_HEIGHT = "297mm";
+const PRINT_PAGE_SIZE = `${PRINT_PAGE_WIDTH} ${PRINT_PAGE_HEIGHT}`;
 
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -236,7 +239,8 @@ async function loadService(id: number) {
 }
 
 const CSS = `
-@page { size: A3 landscape; margin: 10mm 10mm 14mm; @bottom-center { content: counter(page); font: 10pt "Segoe UI", Tahoma, Arial, sans-serif; color: #666; } }
+@page { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; @bottom-center { content: counter(page); font: 10pt "Segoe UI", Tahoma, Arial, sans-serif; color: #666; } }
+@page full-page { size: ${PRINT_PAGE_SIZE}; margin: 0; }
 html, body { background: #fff !important; background-image: none !important; color: #111; }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; width: ${SHEET}px; }
@@ -268,6 +272,14 @@ body { margin: 0; width: ${SHEET}px; }
   break-after: page;
 }
 
+.division-intro-page.full-page {
+  page: full-page;
+  width: ${PRINT_PAGE_WIDTH};
+  height: ${PRINT_PAGE_HEIGHT};
+  max-width: none;
+  margin: 0;
+}
+
 .division-intro-page img {
   display: block;
   width: 100%;
@@ -275,6 +287,14 @@ body { margin: 0; width: ${SHEET}px; }
   max-width: 100%;
   max-height: 250mm;
   object-fit: contain;
+}
+
+.division-intro-page.full-page img {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: fill;
 }
 
 .division-intro-page.portrait-page img {
@@ -319,11 +339,11 @@ function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): 
   return `<section class="service" id="s${detail.id}"><h2 style="color:${esc(detail.serviceDivision.color ?? DEFAULT_LABEL_COLOR)}">${esc(serviceTitle(detail.name))}</h2>${sheets}${flow}${pictures}</section>`;
 }
 
-function renderHtmlPages(pages: string[], isPortrait = false): string {
+function renderHtmlPages(pages: string[], layout: "full-page" | "portrait" = "full-page"): string {
   return pages
     .map(
       (src, index) =>
-        `<div class="division-intro-page ${isPortrait ? "portrait-page" : ""}">
+        `<div class="division-intro-page ${layout === "portrait" ? "portrait-page" : "full-page"}">
           <img src="${esc(src)}" alt="page ${index + 1}">
         </div>`,
     )
@@ -338,11 +358,11 @@ function documentHtml(
   console.log("[PDF Export] Generating full document HTML string...");
 
   const startHtml =
-    renderHtmlPages(startPages.guide1, true) +
-    renderHtmlPages(startPages.guide2_3, false) +
-    renderHtmlPages(startPages.guide6_7, false);
+    renderHtmlPages(startPages.guide1, "portrait") +
+    renderHtmlPages(startPages.guide2_3) +
+    renderHtmlPages(startPages.guide6_7);
 
-  const endHtml = renderHtmlPages(endPages, true);
+  const endHtml = renderHtmlPages(endPages, "portrait");
 
   const toc = data
     .map(
@@ -356,7 +376,7 @@ function documentHtml(
   const body = data
     .map(({ division, introPages, services }) => {
       console.log(`[PDF Export] Formatting division ID ${division.id} ("${division.name}") with ${introPages.length} intro pages`);
-      const intro = renderHtmlPages(introPages, false);
+      const intro = renderHtmlPages(introPages);
 
       return (
         `<div class="division" id="d${division.id}">` +
