@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useLanguage } from "@/components/settings/language-context";
 import {
-  ArrowDown,
-  ArrowUp,
   Copy,
   Download,
+  GripVertical,
   Link2,
   Minus,
   Plus,
@@ -16,6 +15,7 @@ import {
 import { editorApi, type EditorFlowchart } from "@/lib/guide-api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ColorPick } from "@/components/ui/color-pick";
 import { Input } from "@/components/ui/input";
 import { Drawing } from "@/components/flowchart/copy-canvas";
 import { exportDiagramXlsx } from "@/components/flowchart/export-xlsx";
@@ -34,10 +34,12 @@ import {
   relayout,
   sheetsOf,
   snap,
+  toLanes,
   uid,
   type ShapeKind,
 } from "@/components/flowchart/diagram";
 import type {
+  CopyCell,
   CopyDoc,
   CopyLane,
   CopyLine,
@@ -69,10 +71,14 @@ export function DiagramEditor({
   const shapeKinds = getShapeKinds(isArabic);
   const t = (ar: string, en: string) => (isArabic ? ar : en);
 
-  const [doc, setDocState] = useState<CopyDoc>(() =>
-    parseDoc(flowchart.json, flowchart.title ?? ""),
-  );
+  // Imported diagrams are turned into editable lanes as soon as they open (nothing is saved until the first edit).
+  const [doc, setDocState] = useState<CopyDoc>(() => {
+    const d = parseDoc(flowchart.json, flowchart.title ?? "");
+    const lanes = d.lanes ? null : toLanes(d);
+    return lanes ? normalize(lanes) : d;
+  });
   const docRef = useRef(doc);
+
   const svgRef = useRef<SVGSVGElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const [sel, setSel] = useState<string | undefined>();
@@ -157,6 +163,21 @@ export function DiagramEditor({
   const line = sel?.startsWith("l:")
     ? doc.lines.find((l) => l.id === sel.slice(2))
     : undefined;
+
+  const cellIndex = sel?.startsWith("c:") ? Number(sel.slice(2)) : -1;
+  const cell = cellIndex >= 0 ? doc.cells[cellIndex] : undefined;
+
+  const patchCell = (patch: Partial<CopyCell>, coalesce?: string) =>
+    cell &&
+    edit(
+      (d) => ({
+        ...d,
+        cells: d.cells.map((c, i) =>
+          i === cellIndex ? { ...c, ...patch } : c,
+        ),
+      }),
+      coalesce,
+    );
 
   const remove = () => {
     if (shape) {
@@ -436,15 +457,20 @@ export function DiagramEditor({
       coalesce,
     );
 
-  const moveLane = (i: number, dir: -1 | 1) =>
+  const [dragLane, setDragLane] = useState<number | null>(null);
+  const [overLane, setOverLane] = useState<number | null>(null);
+
+  /** Moves the lane at `from` to position `to`. */
+  const moveLane = (from: number, to: number) =>
     setLanes((ls) => {
       const next = [...ls];
-      [next[i], next[i + dir]] = [next[i + dir], next[i]];
+      const [l] = next.splice(from, 1);
+      next.splice(to, 0, l);
       return next;
     });
 
   const importSheet = (d: CopyDoc) => {
-    const next = structuredClone(d);
+    const next = (d.lanes ? null : toLanes(d)) ?? structuredClone(d);
     next.title = next.title ?? "";
 
     commit(normalize(next), docRef.current);
@@ -663,7 +689,10 @@ export function DiagramEditor({
           size="sm"
           variant={connecting === false ? "outline" : "default"}
           onClick={() =>
-            setConnecting(connecting === false ? null : false)
+            // With a shape already selected it is the first end; just pick the second.
+            setConnecting(
+              connecting === false ? (shape ? shape.id : null) : false,
+            )
           }
         >
           <Link2 />{" "}
@@ -703,6 +732,11 @@ export function DiagramEditor({
               "block touch-none select-none",
               connecting !== false && "cursor-crosshair",
             )}
+            onPointerDown={() => {
+              // Shapes, lines, cells and handles stop propagation, so this is a click on empty canvas.
+              setSel(undefined);
+              setConnecting(false);
+            }}
           >
             <defs>
               <pattern
@@ -729,10 +763,15 @@ export function DiagramEditor({
                 e.stopPropagation();
                 setSel(`l:${id}`);
               }}
-              onBgDown={() => {
-                setSel(undefined);
-                setConnecting(false);
-              }}
+              onCellDown={
+                lanes
+                  ? undefined
+                  : (i, e) => {
+                    e.stopPropagation();
+                    setConnecting(false);
+                    setSel(`c:${i}`);
+                  }
+              }
             />
 
             <rect
@@ -829,20 +868,6 @@ export function DiagramEditor({
               </div>
 
               <div className="flex items-end gap-3">
-                <ColorInput
-                  label={t("التعبئة", "Fill")}
-                  value={shape.fill === "none" ? "#ffffff" : shape.fill}
-                  onChange={(c) => patchShape({ fill: c }, "fill")}
-                />
-
-                <ColorInput
-                  label={t("الإطار", "Border")}
-                  value={
-                    shape.stroke === "none" ? "#000000" : shape.stroke
-                  }
-                  onChange={(c) => patchShape({ stroke: c }, "stroke")}
-                />
-
                 <Field label={t("سماكة الإطار", "Border thickness")}>
                   <Input
                     type="number"
@@ -979,7 +1004,71 @@ export function DiagramEditor({
             </>
           )}
 
-          {!shape && !line && (
+          {cell && (
+            <>
+              <Field label={t("النص", "Text")}>
+                <textarea
+                  value={cell.text ?? ""}
+                  onChange={(e) =>
+                    patchCell({ text: e.target.value }, "cell-text")
+                  }
+                  rows={3}
+                  className="w-full resize-y rounded-md border bg-card px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                />
+              </Field>
+
+              <div className="flex items-end gap-2">
+                <Field label={t("حجم الخط", "Font size")}>
+                  <Input
+                    type="number"
+                    min={8}
+                    max={60}
+                    value={Math.round(cell.size ?? 14)}
+                    onChange={(e) =>
+                      patchCell(
+                        {
+                          size: Math.min(
+                            60,
+                            Math.max(8, Number(e.target.value) || 14),
+                          ),
+                        },
+                        "cell-size",
+                      )
+                    }
+                    className="h-8 w-20"
+                  />
+                </Field>
+
+                <Button
+                  size="sm"
+                  variant={cell.bold ? "secondary" : "outline"}
+                  onClick={() => patchCell({ bold: !cell.bold })}
+                >
+                  <b>B</b>
+                </Button>
+
+                <ColorInput
+                  label={t("لون النص", "Text color")}
+                  value={cell.color ?? "#000000"}
+                  onChange={(c) => patchCell({ color: c }, "cell-color")}
+                />
+              </div>
+
+              <Button
+                size="sm"
+                variant="outline"
+                className="self-start hover:text-destructive"
+                onClick={() => {
+                  patchCell({ text: "" });
+                  setSel(undefined);
+                }}
+              >
+                <Trash2 /> {t("حذف النص", "Delete text")}
+              </Button>
+            </>
+          )}
+
+          {!shape && !line && !cell && (
             <>
               <Field
                 label={t(
@@ -1026,33 +1115,113 @@ export function DiagramEditor({
                 />
               </Field>
 
+              {lanes && (
+                <div className="flex flex-col gap-2">
+                  {(doc.heads ?? []).map((h, i) => (
+                    <div key={i} className="flex items-center gap-1">
+                      <Input
+                        value={h}
+                        onChange={(e) =>
+                          edit(
+                            (d) => ({
+                              ...d,
+                              heads: (d.heads ?? []).map((x, j) =>
+                                j === i ? e.target.value : x,
+                              ),
+                            }),
+                            `head${i}`,
+                          )
+                        }
+                        className="h-8 min-w-0 flex-1"
+                        aria-label={t("نص إضافي", "Extra text")}
+                      />
+
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        className="size-6 hover:text-destructive"
+                        onClick={() =>
+                          edit((d) => ({
+                            ...d,
+                            heads: (d.heads ?? []).filter(
+                              (_, j) => j !== i,
+                            ),
+                          }))
+                        }
+                        aria-label={t("حذف النص", "Delete text")}
+                      >
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="self-start"
+                    onClick={() =>
+                      edit((d) => ({
+                        ...d,
+                        heads: [...(d.heads ?? []), t("نص جديد", "New text")],
+                      }))
+                    }
+                  >
+                    <Plus /> {t("إضافة سطر نص", "Add text line")}
+                  </Button>
+                </div>
+              )}
+
               {lanes ? (
                 <div className="flex flex-col gap-2 border-t pt-3">
                   <h4 className="text-xs font-semibold text-muted-foreground">
                     {t(
-                      "المسارات (الأول من اليمين)",
-                      "Lanes (first lane on the right)",
+                      "المسارات (الأول من اليمين، اسحب لإعادة الترتيب)",
+                      "Lanes (first lane on the right, drag to reorder)",
                     )}
                   </h4>
 
                   {lanes.map((l, i) => (
-                    <div key={l.id} className="flex items-center gap-1">
-                      <input
-                        type="color"
-                        value={l.color}
-                        onChange={(e) =>
-                          patchLane(
-                            l.id,
-                            { color: e.target.value },
-                            `lc${l.id}`,
-                          )
-                        }
-                        className="size-7 shrink-0 cursor-pointer rounded border bg-transparent p-0.5"
-                        aria-label={t(
-                          "لون اسم المسار",
-                          "Lane label color",
-                        )}
-                      />
+                    <div
+                      key={l.id}
+                      className={cn(
+                        "flex items-center gap-1 rounded",
+                        dragLane !== null &&
+                          dragLane !== i &&
+                          overLane === i &&
+                          "bg-primary/10 ring-1 ring-primary/40",
+                        dragLane === i && "opacity-50",
+                      )}
+                      onDragOver={(e) => {
+                        if (dragLane === null) return;
+                        e.preventDefault();
+                        setOverLane(i);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragLane !== null && dragLane !== i)
+                          moveLane(dragLane, i);
+                        setDragLane(null);
+                        setOverLane(null);
+                      }}
+                    >
+                      <span
+                        draggable
+                        onDragStart={(e) => {
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", l.id);
+                          const row = e.currentTarget.parentElement;
+                          if (row) e.dataTransfer.setDragImage(row, 0, 0);
+                          setDragLane(i);
+                        }}
+                        onDragEnd={() => {
+                          setDragLane(null);
+                          setOverLane(null);
+                        }}
+                        className="shrink-0 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+                        aria-label={t("اسحب لإعادة الترتيب", "Drag to reorder")}
+                      >
+                        <GripVertical className="size-4" />
+                      </span>
 
                       <Input
                         value={l.name}
@@ -1091,28 +1260,6 @@ export function DiagramEditor({
                         className="h-8 w-16 shrink-0 px-1.5"
                         aria-label={t("عرض المسار", "Lane width")}
                       />
-
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-6"
-                        disabled={i === 0}
-                        onClick={() => moveLane(i, -1)}
-                        aria-label={t("نحو اليمين", "Move right")}
-                      >
-                        <ArrowUp className="size-3.5 -rotate-90" />
-                      </Button>
-
-                      <Button
-                        size="icon-sm"
-                        variant="ghost"
-                        className="size-6"
-                        disabled={i === lanes.length - 1}
-                        onClick={() => moveLane(i, 1)}
-                        aria-label={t("نحو اليسار", "Move left")}
-                      >
-                        <ArrowDown className="size-3.5 -rotate-90" />
-                      </Button>
 
                       <Button
                         size="icon-sm"
@@ -1157,12 +1304,14 @@ export function DiagramEditor({
                   </Button>
                 </div>
               ) : (
-                <p className="border-t pt-3 text-xs leading-6 text-muted-foreground">
-                  {t(
-                    "هذا مخطط مستورد: المسارات جزء من الرسم الأصلي ولا يمكن تعديلها هنا، لكن يمكن تعديل الأشكال والأسهم.",
-                    "This is an imported diagram: its lanes are part of the original drawing and cannot be edited here, but shapes and arrows can be edited.",
-                  )}
-                </p>
+                <div className="flex flex-col gap-2 border-t pt-3">
+                  <p className="text-xs leading-6 text-muted-foreground">
+                    {t(
+                      "لم يتم العثور على مسارات في هذا المخطط: انقر على أي نص فيه لتعديله.",
+                      "No lanes were found in this diagram: click any text in it to edit it.",
+                    )}
+                  </p>
+                </div>
               )}
 
               <p className="text-xs leading-6 text-muted-foreground">
@@ -1228,10 +1377,9 @@ function ColorInput({
 }) {
   return (
     <Field label={label}>
-      <input
-        type="color"
+      <ColorPick
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onCommit={onChange}
         className="size-8 cursor-pointer rounded border bg-transparent p-0.5"
       />
     </Field>

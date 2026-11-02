@@ -436,7 +436,7 @@ export function laneAt(
 /** y where the lane headers start (below the title / path / time lines). */
 export const headerTop = (doc: CopyDoc) =>
   MARGIN +
-  [doc.title, doc.path, doc.time].filter(
+  [doc.title, doc.path, doc.time, ...(doc.heads ?? [])].filter(
     (t) => t != null && t !== "",
   ).length *
   ROW_H;
@@ -488,6 +488,7 @@ function laneCells(doc: CopyDoc): CopyCell[] {
   row(doc.title, "#1f497d", 26);
   row(doc.path, "#006600", 22, "#d9d9d9");
   row(doc.time, "#0000cc", 22);
+  (doc.heads ?? []).forEach((h) => row(h, "#1f497d", 22));
 
   const bodyH = Math.max(
     100,
@@ -565,7 +566,74 @@ export function relayout(
   return { ...doc, lanes: next, shapes, lines };
 }
 
-export const newDoc = (title = ""): CopyDoc => ({
+/**
+ * Turns an imported drawing (plain cells) into an editable swimlane diagram: the last row of gray header cells becomes
+ * the lanes, the text rows above them become the title lines, and shapes move with their lane.
+ * Returns null when no lane headers are found.
+ */
+export function toLanes(doc: CopyDoc): CopyDoc | null {
+  const grays = doc.cells.filter(
+    (c) => isGray(c.fill) && c.w > 0 && c.h <= 260,
+  );
+  const rowY = Math.max(
+    -1,
+    ...grays.filter((c) => c.text?.trim()).map((c) => c.y),
+  );
+  if (rowY < 0) return null;
+
+  const headers = grays
+    .filter((c) => eq(c.y, rowY) && c.text?.trim())
+    .sort((a, b) => b.x - a.x);
+  if (!headers.length) return null;
+
+  const lanes: CopyLane[] = headers.map((h) => ({
+    id: `n${uid()}`,
+    name: h.text!.trim(),
+    color: h.color && h.color !== "#ffffff" ? h.color : "#006600",
+    w: Math.min(900, Math.max(160, Math.round(h.w))),
+  }));
+
+  const above = doc.cells
+    .filter((c) => c.text?.trim() && c.y < rowY - 2)
+    .sort((a, b) => a.y - b.y || b.x - a.x)
+    .map((c) => c.text!.trim());
+
+  const out: CopyDoc = {
+    ...doc,
+    lanes,
+    title: above[0],
+    path: above[1],
+    time: above[2],
+    heads: above.slice(3),
+  };
+
+  const dy = bodyTop(out) - (rowY + headers[0].h);
+  const laneOf = (x: number) =>
+    headers.findIndex((h) => x >= h.x - 1 && x <= h.x + h.w + 1);
+  const dx = (x: number) => {
+    const i = laneOf(x);
+    return i < 0 ? 0 : laneLeft(lanes, i) - headers[i].x;
+  };
+
+  out.shapes = doc.shapes.map((s) => ({
+    ...s,
+    x: Math.max(0, s.x + dx(s.x + s.w / 2)),
+    y: Math.max(0, s.y + dy),
+  }));
+
+  out.lines = doc.lines.map((l) => {
+    if (l.from && l.to) return l;
+    const d = dx(l.points[0][0]);
+    return {
+      ...l,
+      points: l.points.map(([x, y]) => [x + d, y + dy] as Pt),
+    };
+  });
+
+  return out;
+}
+
+export const newDoc =(title = ""): CopyDoc => ({
   mode: "copy",
   width: 1060,
   height: 700,
