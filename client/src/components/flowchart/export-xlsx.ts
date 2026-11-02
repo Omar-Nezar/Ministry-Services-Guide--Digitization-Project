@@ -32,7 +32,7 @@ function txBody(t: CopyText): string {
   const paras = t.paras
     .map((p) => {
       const rpr = `lang="ar-SA" sz="${Math.max(100, Math.round(p.size * 75))}" b="${p.bold ? 1 : 0}"`;
-      const font = `<a:solidFill><a:srgbClr val="${hex(p.color)}"/></a:solidFill><a:latin typeface="Arial"/><a:cs typeface="Arial"/>`;
+      const font = `<a:solidFill><a:srgbClr val="${hex(p.color)}"/></a:solidFill><a:latin typeface="Calibri"/><a:cs typeface="Segoe UI"/>`; // the canvas: Calibri, then Segoe UI for Arabic
       const algn = ({ left: "l", center: "ctr", right: "r", justify: "just" } as Record<string, string>)[p.align] ?? "l";
       return (
         `<a:p><a:pPr algn="${algn}"${rtl ? ' rtl="1"' : ""}/>` +
@@ -100,7 +100,8 @@ function lineXml(l: CopyLine, id: number): string {
 
 // ---- sheet: cells ---------------------------------------------------------------------
 class Styles {
-  fonts = ['<font><sz val="11"/><name val="Arial"/></font>'];
+  // Excel measures column widths in digits of this default font: Calibri 11 = 7 px, which the widths below assume
+  fonts = ['<font><sz val="11"/><name val="Calibri"/></font>'];
   fills = ['<fill><patternFill patternType="none"/></fill>', '<fill><patternFill patternType="gray125"/></fill>'];
   borders = ["<border><left/><right/><top/><bottom/><diagonal/></border>"];
   xfs = ['<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>'];
@@ -113,7 +114,7 @@ class Styles {
   xf(c: CopyCell): number {
     const rtl = !!c.text && ARABIC.test(c.text);
     const pt = Math.round((c.size ?? 14.67) * 0.75 * 2) / 2;
-    const font = this.idx(this.fonts, `<font>${c.bold ? "<b/>" : ""}<sz val="${Math.min(409, Math.max(1, pt))}"/><color rgb="FF${hex(c.color)}"/><name val="Arial"/></font>`);
+    const font = this.idx(this.fonts, `<font>${c.bold ? "<b/>" : ""}<sz val="${Math.min(409, Math.max(1, pt))}"/><color rgb="FF${hex(c.color)}"/><name val="Calibri"/></font>`);
     const fill = c.fill ? this.idx(this.fills, `<fill><patternFill patternType="solid"><fgColor rgb="FF${hex(c.fill, "FFFFFF")}"/><bgColor indexed="64"/></patternFill></fill>`) : 0;
     const side = (tag: string, s?: [string, number]) =>
       s ? `<${tag} style="${s[1] <= 1.5 ? "thin" : s[1] <= 3.5 ? "medium" : "thick"}"><color rgb="FF${hex(s[0])}"/></${tag}>` : `<${tag}/>`;
