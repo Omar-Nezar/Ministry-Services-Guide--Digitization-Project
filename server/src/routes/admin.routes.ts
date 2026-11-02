@@ -1,11 +1,11 @@
 import { Router } from "express";
 import * as admin from "../controllers/admin.controller.js";
-import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { authenticateSession } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/rbac.middleware.js";
 
 const adminRouter = Router();
 
-adminRouter.use(authenticateToken, requireRole("admin"));
+adminRouter.use(authenticateSession, requireRole("admin"));
 
 adminRouter.get("/dashboard", admin.getDashboard);
 

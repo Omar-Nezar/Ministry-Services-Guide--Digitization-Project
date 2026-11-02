@@ -7,7 +7,7 @@ import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { editorApi, type EditorDivision } from "@/lib/guide-api";
 import { cn } from "@/lib/utils";
-import { logout } from "@/slices/auth.slice";
+import { logoutUser } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
 import { EditorTree } from "./editor-tree";
 
@@ -33,6 +33,7 @@ export function EditorLayout() {
   const { isArabic } = useLanguage();
   const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
+  const authError = useSelector((state: RootState) => state.auth.error);
   const [tree, setTreeState] = useState<EditorDivision[] | undefined>();
   const [error, setError] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -63,11 +64,9 @@ export function EditorLayout() {
       setTreeState(await editorApi.tree());
       setError(false);
     } catch (e) {
-      // An expired token: back to the sign-in page
-      if ((e as { response?: { status?: number } }).response?.status === 401) dispatch(logout());
-      else setError(true);
+      if ((e as { response?: { status?: number } }).response?.status !== 401) setError(true);
     }
-  }, [dispatch]);
+  }, []);
 
   useEffect(() => {
     void reloadTree();
@@ -106,11 +105,16 @@ export function EditorLayout() {
           </nav>
           <div className="ms-auto flex items-center gap-2 text-sm text-muted-foreground">
             <span className="max-sm:hidden">{user?.name}</span>
-            <Button type="button" variant="outline" size="sm" onClick={() => leaveConfirmed() && dispatch(logout())}>
+            <Button type="button" variant="outline" size="sm" onClick={() => leaveConfirmed() && dispatch(logoutUser())}>
               <LogOut aria-hidden="true" /> {isArabic ? "تسجيل الخروج" : "Sign out"}
             </Button>
           </div>
         </div>
+        {authError && (
+          <p role="alert" className="mx-auto max-w-[1500px] px-4 pb-2 text-sm text-destructive lg:px-6">
+            {isArabic ? "تعذر تسجيل الخروج. يرجى إعادة المحاولة." : authError}
+          </p>
+        )}
       </div>
 
       <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 lg:flex-row lg:gap-8 lg:px-6">

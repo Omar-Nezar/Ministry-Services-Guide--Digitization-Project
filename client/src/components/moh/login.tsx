@@ -17,7 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { loginUser, logout } from "@/slices/auth.slice";
+import { loginUser, logoutUser } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
 
 const arabicLoginErrors: Record<string, string> = {
@@ -31,6 +31,8 @@ const arabicLoginErrors: Record<string, string> = {
   "Unable to log in right now.": "يتعذر تسجيل الدخول الآن.",
   "This account is disabled. Contact an administrator.":
     "هذا الحساب معطل. تواصل مع مدير النظام.",
+  "Unable to sign out. Please try again.": "تعذر تسجيل الخروج. يرجى المحاولة مرة أخرى.",
+  "Invalid CSRF token.": "تعذر إكمال تسجيل الخروج. يرجى إعادة المحاولة.",
 };
 
 export function Login() {
@@ -47,6 +49,14 @@ export function Login() {
     // The server decides the role and the divisions of the account
     const result = await dispatch(loginUser({ email, password }));
     if (loginUser.fulfilled.match(result)) setPassword("");
+  }
+
+  async function handleLogout() {
+    const result = await dispatch(logoutUser());
+    if (logoutUser.fulfilled.match(result)) {
+      setEmail("");
+      setPassword("");
+    }
   }
 
   return (
@@ -100,6 +110,11 @@ export function Login() {
                       </p>
                     )}
                   </div>
+                  {error && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {isArabic ? arabicLoginErrors[error] ?? error : error}
+                    </p>
+                  )}
                   <Link
                     to="/moh/editor"
                     className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground outline-none transition hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring"
@@ -110,11 +125,7 @@ export function Login() {
                     type="button"
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
-                      dispatch(logout());
-                      setEmail("");
-                      setPassword("");
-                    }}
+                    onClick={() => void handleLogout()}
                   >
                     <LogOut aria-hidden="true" />
                     {isArabic ? "تسجيل الخروج" : "Sign out"}

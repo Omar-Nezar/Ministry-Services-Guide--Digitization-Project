@@ -10,8 +10,54 @@ import { UPLOAD_DIR } from "./middlewares/upload.middleware.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
+const isProduction = process.env.NODE_ENV === "production";
+const allowedOrigins = (
+  process.env.CLIENT_ORIGINS ??
+  (isProduction ? "" : "http://localhost:5173")
+)
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-app.use(cors());
+if (allowedOrigins.length === 0) {
+  throw new Error("CLIENT_ORIGINS must contain at least one trusted frontend origin.");
+}
+
+if (
+  allowedOrigins.some((origin) => {
+    try {
+      const parsed = new URL(origin);
+      return (
+        parsed.origin !== origin ||
+        (isProduction && parsed.protocol !== "https:")
+      );
+    } catch {
+      return true;
+    }
+  })
+) {
+  throw new Error(
+    "CLIENT_ORIGINS must contain exact origins; production origins must use HTTPS.",
+  );
+}
+
+const sameSite = process.env.SESSION_COOKIE_SAME_SITE ?? "lax";
+if (sameSite !== "lax" && sameSite !== "none") {
+  throw new Error('SESSION_COOKIE_SAME_SITE must be either "lax" or "none".');
+}
+if (sameSite === "none" && !isProduction) {
+  throw new Error('SESSION_COOKIE_SAME_SITE="none" requires NODE_ENV=production and HTTPS.');
+}
+
+app.disable("x-powered-by");
+app.use(
+  cors({
+    origin(origin, callback) {
+      callback(null, origin !== undefined && allowedOrigins.includes(origin));
+    },
+    credentials: true,
+  }),
+);
 // A flowchart with pictures can be a few hundred KB
 app.use(express.json({ limit: "20mb" }));
 app.use("/uploads", express.static(UPLOAD_DIR));

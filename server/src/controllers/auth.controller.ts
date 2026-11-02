@@ -1,8 +1,15 @@
 import type { Request, Response } from "express";
+import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@db";
-import { hashPassword, verifyPassword } from "@/utils/password.js";
-import { signToken, type TokenPayload } from "@/utils/jwt.js";
+import { verifyPassword } from "@/utils/password.js";
+import {
+  createCsrfToken,
+  hashSessionId,
+  setSessionCookie,
+  clearSessionCookie,
+  SESSION_DURATION_SECONDS,
+} from "@/utils/session.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 
 type LoginInput = {
@@ -64,13 +71,21 @@ export async function loginUser(
       ({ serviceDivision }) => serviceDivision.name,
     );
 
-    const tokenPayload: TokenPayload = {
-      userId: user.id,
-      email: user.email,
-      roles,
-      serviceDivisions: departments,
-    };
-    const token = signToken(tokenPayload);
+    const now = new Date();
+    const sessionId = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(now.getTime() + SESSION_DURATION_SECONDS * 1000);
+
+    await prisma.session.deleteMany({
+      where: { expiresAt: { lte: now } },
+    });
+    await prisma.session.create({
+      data: {
+        id: hashSessionId(sessionId),
+        userId: user.id,
+        expiresAt,
+      },
+    });
+    setSessionCookie(response, sessionId);
 
     response.status(200).json({
       id: user.id,
@@ -78,7 +93,7 @@ export async function loginUser(
       email: user.email,
       roles,
       departments,
-      token,
+      csrfToken: createCsrfToken(sessionId),
     });
   } catch (error: unknown) {
     console.error("Failed to log in user.", error);
@@ -91,6 +106,11 @@ export async function getCurrentUser(
   response: Response,
 ): Promise<void> {
   if (!request.user) {
+    response.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  if (!request.sessionId || !request.csrfToken) {
     response.status(401).json({ error: "Authentication required." });
     return;
   }
@@ -122,10 +142,32 @@ export async function getCurrentUser(
       email: user.email,
       roles,
       departments,
+      csrfToken: request.csrfToken,
     });
   } catch (error: unknown) {
     console.error("Failed to get current user.", error);
     response.status(500).json({ error: "Unable to get user right now." });
+  }
+}
+
+export async function logoutUser(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  if (!request.sessionId) {
+    response.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  try {
+    await prisma.session.deleteMany({
+      where: { id: hashSessionId(request.sessionId) },
+    });
+    clearSessionCookie(response);
+    response.status(204).end();
+  } catch (error: unknown) {
+    console.error("Failed to log out user.", error);
+    response.status(500).json({ error: "Unable to log out right now." });
   }
 }
 

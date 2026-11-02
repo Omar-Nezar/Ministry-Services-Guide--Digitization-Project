@@ -91,7 +91,17 @@ export async function updateStaff(request: Request, response: Response): Promise
     data.serviceDivisions = { deleteMany: {}, create: { serviceDivisionId: divisionId } };
   }
 
-  const updated = await prisma.user.update({ where: { id }, data, select: staffSelect });
+  const updated = await prisma.$transaction(async (transaction) => {
+    const user = await transaction.user.update({
+      where: { id },
+      data,
+      select: staffSelect,
+    });
+    if (body["isActive"] === false) {
+      await transaction.session.deleteMany({ where: { userId: id } });
+    }
+    return user;
+  });
   response.json(staffJson(updated));
 }
 

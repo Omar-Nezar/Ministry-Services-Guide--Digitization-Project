@@ -1,13 +1,13 @@
 import { Router } from "express";
 import * as editor from "../controllers/editor.controller.js";
-import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { authenticateSession } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/rbac.middleware.js";
 import { uploadImage } from "../middlewares/upload.middleware.js";
 
 const editorRouter = Router();
 
 // Admin and staff only. Which category a staff member may change is checked in the controller.
-editorRouter.use(authenticateToken, requireRole("staff", "admin"));
+editorRouter.use(authenticateSession, requireRole("staff", "admin"));
 
 editorRouter.get("/tree", editor.getTree);
 editorRouter.put("/divisions/order", requireRole("admin"), editor.reorderDivisions);

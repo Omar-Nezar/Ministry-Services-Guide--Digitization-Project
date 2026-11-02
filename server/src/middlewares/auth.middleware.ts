@@ -1,51 +1,90 @@
 import type { Request, Response, NextFunction } from "express";
 import { prisma } from "@db";
-import { verifyToken, type TokenPayload } from "@/utils/jwt.js";
+import {
+  clearSessionCookie,
+  createCsrfToken,
+  getSessionIdFromCookie,
+  hashSessionId,
+} from "@/utils/session.js";
+import { timingSafeEqual } from "node:crypto";
+
+export type AuthenticatedUser = {
+  userId: number;
+  email: string;
+  roles: string[];
+  serviceDivisions: string[];
+};
 
 export interface AuthenticatedRequest extends Request {
-  /** Roles and divisions are read from the database on every request, not trusted from the token */
-  user?: TokenPayload;
+  /** Roles and divisions are loaded from the database for each request. */
+  user?: AuthenticatedUser;
   userName?: string;
+  sessionId?: string;
+  csrfToken?: string;
 }
 
-export async function authenticateToken(request: Request, response: Response, next: NextFunction): Promise<void> {
-  const authHeader = request.headers["authorization"];
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    response.status(401).json({ error: "Access token required." });
-    return;
-  }
+function isSafeMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD" || method === "OPTIONS";
+}
 
-  let userId: number;
-  try {
-    userId = verifyToken(authHeader.slice("Bearer ".length)).userId;
-  } catch {
-    response.status(401).json({ error: "Invalid or expired token." });
+export async function authenticateSession(request: Request, response: Response, next: NextFunction): Promise<void> {
+  const sessionId = getSessionIdFromCookie(request.headers.cookie);
+  if (!sessionId) {
+    clearSessionCookie(response);
+    response.status(401).json({ error: "Authentication required." });
     return;
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+    const session = await prisma.session.findUnique({
+      where: { id: hashSessionId(sessionId) },
       include: {
-        roles: { include: { role: { select: { name: true } } } },
-        serviceDivisions: { include: { serviceDivision: { select: { name: true } } } },
+        user: {
+          include: {
+            roles: { include: { role: { select: { name: true } } } },
+            serviceDivisions: {
+              include: { serviceDivision: { select: { name: true } } },
+            },
+          },
+        },
       },
     });
 
-    // A removed or disabled account stops working at once, even with a valid token
-    if (!user || !user.isActive) {
-      response.status(401).json({ error: "Invalid or expired token." });
+    if (!session || session.expiresAt <= new Date() || !session.user.isActive) {
+      if (session) {
+        await prisma.session.deleteMany({ where: { id: session.id } });
+      }
+      clearSessionCookie(response);
+      response.status(401).json({ error: "Session is invalid or expired." });
       return;
     }
 
     const authenticated = request as AuthenticatedRequest;
+    authenticated.sessionId = sessionId;
+    authenticated.csrfToken = createCsrfToken(sessionId);
     authenticated.user = {
-      userId: user.id,
-      email: user.email,
-      roles: user.roles.map(({ role }) => role.name),
-      serviceDivisions: user.serviceDivisions.map(({ serviceDivision }) => serviceDivision.name),
+      userId: session.user.id,
+      email: session.user.email,
+      roles: session.user.roles.map(({ role }) => role.name),
+      serviceDivisions: session.user.serviceDivisions.map(
+        ({ serviceDivision }) => serviceDivision.name,
+      ),
     };
-    authenticated.userName = user.name;
+    authenticated.userName = session.user.name;
+
+    if (!isSafeMethod(request.method)) {
+      const suppliedToken = request.get("X-CSRF-Token") ?? "";
+      const expected = Buffer.from(authenticated.csrfToken, "utf8");
+      const supplied = Buffer.from(suppliedToken, "utf8");
+      if (
+        expected.length !== supplied.length ||
+        !timingSafeEqual(expected, supplied)
+      ) {
+        response.status(403).json({ error: "Invalid CSRF token." });
+        return;
+      }
+    }
+
     next();
   } catch (error) {
     console.error("Failed to authenticate the user.", error);

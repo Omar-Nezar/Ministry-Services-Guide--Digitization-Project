@@ -1,64 +1,93 @@
 import { Router } from "express";
 import {
-  loginUser,
-  getCurrentUser,
   deleteUser,
+  getCurrentUser,
+  loginUser,
+  logoutUser,
 } from "../controllers/auth.controller.js";
-import { authenticateToken } from "../middlewares/auth.middleware.js";
+import { authenticateSession } from "../middlewares/auth.middleware.js";
 import {
-  requireRole,
-  requireDivision,
   requireAccess,
+  requireDivision,
+  requireRole,
 } from "../middlewares/rbac.middleware.js";
 
 const authRouter = Router();
 
+authRouter.use((_request, response, next) => {
+  response.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 authRouter.post("/login", loginUser);
+authRouter.get("/me", authenticateSession, getCurrentUser);
+authRouter.post("/logout", authenticateSession, logoutUser);
 
-// Protected routes (require a valid JWT in the Authorization: Bearer <token> header)
-authRouter.get("/me", authenticateToken, getCurrentUser);
-
-authRouter.get("/admin/dashboard", authenticateToken, requireRole("admin"), (_request, response) => {
-  response.status(200).json({
-    message: "Admin dashboard",
-    access: "full",
-  });
-},
-);
-// Delete a user - requires admin credentials
-authRouter.delete("/users/:email", authenticateToken, requireRole("admin"), deleteUser);
-
-authRouter.get("/staff/dashboard", authenticateToken, requireRole("staff", "admin"), (_request, response) => {
-  response.status(200).json({
-    message: "Staff dashboard",
-    access: "staff and admin",
-  });
-},
+authRouter.get(
+  "/admin/dashboard",
+  authenticateSession,
+  requireRole("admin"),
+  (_request, response) => {
+    response.status(200).json({
+      message: "Admin dashboard",
+      access: "full",
+    });
+  },
 );
 
-authRouter.get("/lands/dashboard", authenticateToken, requireDivision("Lands"), (_request, response) => {
-  response.status(200).json({
-    message: "Lands division dashboard",
-    access: "Lands division members only",
-  });
-},
+authRouter.delete(
+  "/users/:email",
+  authenticateSession,
+  requireRole("admin"),
+  deleteUser,
 );
 
-authRouter.get("/it/dashboard", authenticateToken, requireDivision("IT"), (_request, response) => {
-  response.status(200).json({
-    message: "IT division dashboard",
-    access: "IT division members only",
-  });
-},
+authRouter.get(
+  "/staff/dashboard",
+  authenticateSession,
+  requireRole("staff", "admin"),
+  (_request, response) => {
+    response.status(200).json({
+      message: "Staff dashboard",
+      access: "staff and admin",
+    });
+  },
 );
 
-// Combined role + division: only admins who are also in the Lands division
-authRouter.get("/admin/lands", authenticateToken, requireAccess({ roles: ["admin"], divisions: ["Lands"] }), (_request, response) => {
-  response.status(200).json({
-    message: "Admin + Lands division resource",
-    access: "admin role AND Lands division membership required",
-  });
-},
+authRouter.get(
+  "/lands/dashboard",
+  authenticateSession,
+  requireDivision("Lands"),
+  (_request, response) => {
+    response.status(200).json({
+      message: "Lands division dashboard",
+      access: "Lands division members only",
+    });
+  },
+);
+
+authRouter.get(
+  "/it/dashboard",
+  authenticateSession,
+  requireDivision("IT"),
+  (_request, response) => {
+    response.status(200).json({
+      message: "IT division dashboard",
+      access: "IT division members only",
+    });
+  },
+);
+
+authRouter.get(
+  "/admin/lands",
+  authenticateSession,
+  requireAccess({ roles: ["admin"], divisions: ["Lands"] }),
+  (_request, response) => {
+    response.status(200).json({
+      message: "Admin + Lands division resource",
+      access: "admin role AND Lands division membership required",
+    });
+  },
 );
 
 export default authRouter;

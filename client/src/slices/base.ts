@@ -1,10 +1,11 @@
 import axios from "axios";
-import { getAuthToken } from "@/lib/auth-token";
+import { getCsrfToken, handleExpiredSession } from "@/lib/auth-session";
 
 export const apiBaseUrl = import.meta.env.VITE_API_URL;
 
 const api = axios.create({
     baseURL: apiBaseUrl,
+    withCredentials: true,
     headers: {
         "Content-Type": "application/json",
     },
@@ -12,15 +13,31 @@ const api = axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        const token = getAuthToken();
+        const method = config.method?.toLowerCase();
+        const isSafeMethod = method === "get" || method === "head" || method === "options";
+        const csrfToken = getCsrfToken();
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (!isSafeMethod && csrfToken) {
+            config.headers.set("X-CSRF-Token", csrfToken);
         }
 
         return config;
     },
     (error) => Promise.reject(error),
+);
+
+api.interceptors.response.use(
+    (response) => response,
+    (error: unknown) => {
+        if (
+            axios.isAxiosError(error) &&
+            error.response?.status === 401 &&
+            !error.config?.url?.endsWith("/auth/login")
+        ) {
+            handleExpiredSession();
+        }
+        return Promise.reject(error);
+    },
 );
 
 export default api;

@@ -3,7 +3,7 @@ import path from "node:path";
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@db";
-import type { TokenPayload } from "@/utils/jwt.js";
+import type { AuthenticatedUser } from "@/middlewares/auth.middleware.js";
 import { byOrder, serviceLabels } from "@/utils/guide.js";
 import { canEditDivision, isAdmin } from "@/utils/permissions.js";
 import { logServiceChange } from "@/utils/audit.js";
@@ -16,7 +16,7 @@ import { UPLOAD_DIR } from "@/middlewares/upload.middleware.js";
 const serviceOrder = [{ order: "asc" as const }, { sourceFile: "asc" as const }, { id: "asc" as const }];
 const HEX = /^#[0-9a-fA-F]{6}$/;
 
-const userOf = (request: Request): TokenPayload => (request as AuthenticatedRequest).user!;
+const userOf = (request: Request): AuthenticatedUser => (request as AuthenticatedRequest).user!;
 const idParam = (request: Request, name = "id"): number => Number(request.params[name]);
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const bodyOf = (request: Request): Record<string, unknown> => (isRecord(request.body) ? request.body : {});
