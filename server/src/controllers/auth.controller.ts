@@ -94,6 +94,8 @@ export async function loginUser(
       roles,
       departments,
       csrfToken: createCsrfToken(sessionId),
+      expiresAt: expiresAt.toISOString(),
+      expiresInMs: Math.max(0, expiresAt.getTime() - Date.now()),
     });
   } catch (error: unknown) {
     console.error("Failed to log in user.", error);
@@ -110,7 +112,7 @@ export async function getCurrentUser(
     return;
   }
 
-  if (!request.sessionId || !request.csrfToken) {
+  if (!request.sessionId || !request.csrfToken || !request.sessionExpiresAt) {
     response.status(401).json({ error: "Authentication required." });
     return;
   }
@@ -143,10 +145,50 @@ export async function getCurrentUser(
       roles,
       departments,
       csrfToken: request.csrfToken,
+      expiresAt: request.sessionExpiresAt.toISOString(),
+      expiresInMs: Math.max(0, request.sessionExpiresAt.getTime() - Date.now()),
     });
   } catch (error: unknown) {
     console.error("Failed to get current user.", error);
     response.status(500).json({ error: "Unable to get user right now." });
+  }
+}
+
+export async function refreshSession(
+  request: AuthenticatedRequest,
+  response: Response,
+): Promise<void> {
+  if (!request.sessionId || !request.sessionExpiresAt) {
+    response.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  try {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SESSION_DURATION_SECONDS * 1000);
+    const result = await prisma.session.updateMany({
+      where: {
+        id: hashSessionId(request.sessionId),
+        expiresAt: { gt: now },
+      },
+      data: { expiresAt },
+    });
+
+    if (result.count !== 1) {
+      clearSessionCookie(response);
+      response.status(401).json({ error: "Session is invalid or expired." });
+      return;
+    }
+
+    setSessionCookie(response, request.sessionId);
+    response.status(200).json({
+      csrfToken: request.csrfToken,
+      expiresAt: expiresAt.toISOString(),
+      expiresInMs: Math.max(0, expiresAt.getTime() - Date.now()),
+    });
+  } catch (error: unknown) {
+    console.error("Failed to refresh session.", error);
+    response.status(500).json({ error: "Unable to refresh your session right now." });
   }
 }
 

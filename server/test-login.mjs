@@ -46,8 +46,14 @@ expectStatus(login, 200, "Login");
 
 const sessionCookie = login.response.headers.get("set-cookie")?.split(";", 1)[0];
 const csrfToken = login.body?.csrfToken;
-if (!sessionCookie || typeof csrfToken !== "string" || !csrfToken) {
-  throw new Error("Login did not return a session cookie and CSRF token.");
+const initialExpiresAt = Date.parse(login.body?.expiresAt);
+if (
+  !sessionCookie ||
+  typeof csrfToken !== "string" ||
+  !csrfToken ||
+  !Number.isFinite(initialExpiresAt)
+) {
+  throw new Error("Login did not return a session cookie, CSRF token, and expiration.");
 }
 if ("token" in login.body) {
   throw new Error("Login unexpectedly returned a client-held token.");
@@ -57,6 +63,34 @@ const currentUser = await request("GET", "/auth/me", { cookie: sessionCookie });
 expectStatus(currentUser, 200, "Restore session");
 if (currentUser.body?.email !== email) {
   throw new Error("Restored session did not identify the authenticated account.");
+}
+
+const refreshRejected = await request("POST", "/auth/refresh", {
+  cookie: sessionCookie,
+});
+expectStatus(refreshRejected, 403, "Refresh without CSRF token");
+
+const refresh = await request("POST", "/auth/refresh", {
+  cookie: sessionCookie,
+  csrfToken,
+});
+expectStatus(refresh, 200, "Refresh with CSRF token");
+const refreshedExpiresAt = Date.parse(refresh.body?.expiresAt);
+if (
+  !Number.isFinite(refreshedExpiresAt) ||
+  refreshedExpiresAt <= initialExpiresAt ||
+  typeof refresh.body?.expiresInMs !== "number" ||
+  refresh.body.expiresInMs <= 0
+) {
+  throw new Error("Session refresh did not extend the server-side expiration.");
+}
+
+const refreshedCurrentUser = await request("GET", "/auth/me", {
+  cookie: sessionCookie,
+});
+expectStatus(refreshedCurrentUser, 200, "Verify refreshed session");
+if (Date.parse(refreshedCurrentUser.body?.expiresAt) <= initialExpiresAt) {
+  throw new Error("The refreshed server session did not persist its new expiration.");
 }
 
 const csrfRejected = await request("POST", "/auth/logout", {

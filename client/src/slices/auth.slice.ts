@@ -13,14 +13,21 @@ export type AuthUser = {
 type AuthSession = {
   user: AuthUser;
   csrfToken: string;
+  expiresAt: number;
 };
 
 type AuthState = {
   user: AuthUser | null;
   csrfToken: string | null;
+  expiresAt: number | null;
   initialized: boolean;
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
+  isRefreshingSession: boolean;
+  sessionRefreshError: string | null;
+  isCheckingSession: boolean;
+  sessionCheckError: string | null;
+  sessionExpired: boolean;
 };
 
 type LoginCredentials = {
@@ -43,11 +50,24 @@ function isAuthUser(value: unknown): value is AuthUser {
   );
 }
 
-function isAuthSession(value: unknown): value is AuthUser & { csrfToken: string } {
+function isAuthSession(
+  value: unknown,
+): value is AuthUser & {
+  csrfToken: string;
+  expiresAt: string;
+  expiresInMs: number;
+} {
+  if (typeof value !== "object" || value === null) return false;
+  const session = value as Record<string, unknown>;
   return (
     isAuthUser(value) &&
-    typeof (value as Record<string, unknown>).csrfToken === "string" &&
-    (value as Record<string, unknown>).csrfToken !== ""
+    typeof session.csrfToken === "string" &&
+    session.csrfToken !== "" &&
+    typeof session.expiresAt === "string" &&
+    Number.isFinite(Date.parse(session.expiresAt)) &&
+    typeof session.expiresInMs === "number" &&
+    Number.isFinite(session.expiresInMs) &&
+    session.expiresInMs >= 0
   );
 }
 
@@ -65,8 +85,8 @@ function getApiError(payload: unknown): string | null {
 
 function readSessionPayload(payload: unknown): AuthSession | null {
   if (!isAuthSession(payload)) return null;
-  const { csrfToken, ...user } = payload;
-  return { user, csrfToken };
+  const { csrfToken, expiresInMs, ...user } = payload;
+  return { user, csrfToken, expiresAt: Date.now() + expiresInMs };
 }
 
 export const loadCurrentUser = createAsyncThunk<
@@ -77,7 +97,7 @@ export const loadCurrentUser = createAsyncThunk<
   "auth/loadCurrentUser",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get("/auth/me");
+      const response = await api.get("/auth/me", { timeout: 10_000 });
       const session = readSessionPayload(response.data);
       if (!session) {
         console.error("Current-user API returned an invalid session response.", response.data);
@@ -125,6 +145,57 @@ export const loginUser = createAsyncThunk<
   }
 });
 
+export const checkCurrentSession = createAsyncThunk<
+  AuthSession,
+  void,
+  { rejectValue: string }
+>("auth/checkCurrentSession", async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.get("/auth/me", { timeout: 10_000 });
+    const session = readSessionPayload(response.data);
+    if (!session) {
+      console.error("Session check returned an invalid response.", response.data);
+      return rejectWithValue("The server returned an unexpected response.");
+    }
+    return session;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      return rejectWithValue("");
+    }
+    console.error("Unable to verify the server session.", error);
+    const errorData = axios.isAxiosError(error) ? error.response?.data : null;
+    return rejectWithValue(
+      getApiError(errorData) ?? "Unable to verify your session. Check your connection.",
+    );
+  }
+});
+
+export const refreshSession = createAsyncThunk<
+  number,
+  void,
+  { rejectValue: string }
+>("auth/refreshSession", async (_, { rejectWithValue }) => {
+  try {
+    const response = await api.post("/auth/refresh", undefined, { timeout: 10_000 });
+    const expiresInMs = response.data?.expiresInMs;
+    if (
+      typeof expiresInMs !== "number" ||
+      !Number.isFinite(expiresInMs) ||
+      expiresInMs <= 0
+    ) {
+      console.error("Session refresh API returned an invalid expiration.", response.data);
+      return rejectWithValue("The server returned an unexpected response.");
+    }
+    return Date.now() + expiresInMs;
+  } catch (error: unknown) {
+    console.error("Unable to refresh the server session.", error);
+    const errorData = axios.isAxiosError(error) ? error.response?.data : null;
+    return rejectWithValue(
+      getApiError(errorData) ?? "Unable to refresh your session. Please try again.",
+    );
+  }
+});
+
 export const logoutUser = createAsyncThunk<
   void,
   void,
@@ -146,9 +217,15 @@ export const logoutUser = createAsyncThunk<
 const initialState: AuthState = {
   user: null,
   csrfToken: null,
+  expiresAt: null,
   initialized: false,
   status: "idle",
   error: null,
+  isRefreshingSession: false,
+  sessionRefreshError: null,
+  isCheckingSession: false,
+  sessionCheckError: null,
+  sessionExpired: false,
 };
 
 const authSlice = createSlice({
@@ -156,11 +233,21 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     sessionExpired(state) {
+      if (!state.user) return;
       state.user = null;
       state.csrfToken = null;
+      state.expiresAt = null;
       state.initialized = true;
       state.status = "idle";
       state.error = null;
+      state.isRefreshingSession = false;
+      state.sessionRefreshError = null;
+      state.isCheckingSession = false;
+      state.sessionCheckError = null;
+      state.sessionExpired = true;
+    },
+    dismissSessionExpired(state) {
+      state.sessionExpired = false;
     },
   },
   extraReducers(builder) {
@@ -172,13 +259,16 @@ const authSlice = createSlice({
       .addCase(loadCurrentUser.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.csrfToken = action.payload.csrfToken;
+        state.expiresAt = action.payload.expiresAt;
         state.initialized = true;
         state.status = "succeeded";
         state.error = null;
+        state.sessionExpired = false;
       })
       .addCase(loadCurrentUser.rejected, (state, action) => {
         state.user = null;
         state.csrfToken = null;
+        state.expiresAt = null;
         state.initialized = true;
         state.status = action.payload ? "failed" : "idle";
         state.error = action.payload || null;
@@ -186,13 +276,50 @@ const authSlice = createSlice({
       .addCase(loginUser.pending, (state) => {
         state.status = "loading";
         state.error = null;
+        state.sessionRefreshError = null;
+        state.sessionCheckError = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.user = action.payload.user;
         state.csrfToken = action.payload.csrfToken;
+        state.expiresAt = action.payload.expiresAt;
         state.initialized = true;
         state.status = "succeeded";
         state.error = null;
+        state.isRefreshingSession = false;
+        state.sessionRefreshError = null;
+        state.isCheckingSession = false;
+        state.sessionCheckError = null;
+        state.sessionExpired = false;
+      })
+      .addCase(refreshSession.pending, (state) => {
+        state.isRefreshingSession = true;
+        state.sessionRefreshError = null;
+      })
+      .addCase(refreshSession.fulfilled, (state, action) => {
+        state.expiresAt = action.payload;
+        state.isRefreshingSession = false;
+        state.sessionRefreshError = null;
+      })
+      .addCase(refreshSession.rejected, (state, action) => {
+        state.isRefreshingSession = false;
+        state.sessionRefreshError =
+          action.payload ?? "Unable to refresh your session. Please try again.";
+      })
+      .addCase(checkCurrentSession.pending, (state) => {
+        state.isCheckingSession = true;
+        state.sessionCheckError = null;
+      })
+      .addCase(checkCurrentSession.fulfilled, (state, action) => {
+        state.user = action.payload.user;
+        state.csrfToken = action.payload.csrfToken;
+        state.expiresAt = action.payload.expiresAt;
+        state.isCheckingSession = false;
+        state.sessionCheckError = null;
+      })
+      .addCase(checkCurrentSession.rejected, (state, action) => {
+        state.isCheckingSession = false;
+        state.sessionCheckError = action.payload || null;
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = "failed";
@@ -204,9 +331,15 @@ const authSlice = createSlice({
       .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
         state.csrfToken = null;
+        state.expiresAt = null;
         state.initialized = true;
         state.status = "idle";
         state.error = null;
+        state.sessionRefreshError = null;
+        state.isRefreshingSession = false;
+        state.isCheckingSession = false;
+        state.sessionCheckError = null;
+        state.sessionExpired = false;
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.status = "failed";
@@ -215,5 +348,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { sessionExpired } = authSlice.actions;
+export const { dismissSessionExpired, sessionExpired } = authSlice.actions;
 export default authSlice.reducer;

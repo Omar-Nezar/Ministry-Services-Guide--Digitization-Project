@@ -5,6 +5,7 @@ import { LanguageProvider } from "@/components/settings/language-provider";
 import { Home } from "@/components/general/home";
 import { Login } from "@/components/moh/login";
 import { ProtectedRoute } from "@/components/moh/protected-route";
+import { SessionLifecycle } from "@/components/moh/session-lifecycle";
 import { SignedInRedirect } from "@/components/moh/signed-in-redirect";
 import { GuideDivision } from "@/components/guide/guide-division";
 import { GuideHome } from "@/components/guide/guide-home";
@@ -115,6 +116,7 @@ function App() {
   return (
     <DisplaySettingsProvider>
       <LanguageProvider>
+        <SessionLifecycle />
         <AppRoutes />
       </LanguageProvider>
     </DisplaySettingsProvider>

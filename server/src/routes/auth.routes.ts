@@ -4,6 +4,7 @@ import {
   getCurrentUser,
   loginUser,
   logoutUser,
+  refreshSession,
 } from "../controllers/auth.controller.js";
 import { authenticateSession } from "../middlewares/auth.middleware.js";
 import {
@@ -21,6 +22,7 @@ authRouter.use((_request, response, next) => {
 
 authRouter.post("/login", loginUser);
 authRouter.get("/me", authenticateSession, getCurrentUser);
+authRouter.post("/refresh", authenticateSession, refreshSession);
 authRouter.post("/logout", authenticateSession, logoutUser);
 
 authRouter.get(

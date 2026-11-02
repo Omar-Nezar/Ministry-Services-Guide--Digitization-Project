@@ -21,6 +21,7 @@ export interface AuthenticatedRequest extends Request {
   userName?: string;
   sessionId?: string;
   csrfToken?: string;
+  sessionExpiresAt?: Date;
 }
 
 function isSafeMethod(method: string): boolean {
@@ -62,6 +63,7 @@ export async function authenticateSession(request: Request, response: Response, 
     const authenticated = request as AuthenticatedRequest;
     authenticated.sessionId = sessionId;
     authenticated.csrfToken = createCsrfToken(sessionId);
+    authenticated.sessionExpiresAt = session.expiresAt;
     authenticated.user = {
       userId: session.user.id,
       email: session.user.email,
