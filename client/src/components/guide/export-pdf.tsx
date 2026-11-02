@@ -7,6 +7,7 @@ import { Drawing } from "@/components/flowchart/copy-canvas";
 import { isCopyDoc } from "@/components/flowchart/types";
 import {
   DEFAULT_LABEL_COLOR,
+  diagramColor,
   divisionTitle,
   flowchartTitle,
   guideApi,
@@ -221,7 +222,7 @@ async function loadService(id: number) {
       }
       const svg = renderToStaticMarkup(
         <svg viewBox={`0 0 ${doc.width} ${doc.height}`} role="img">
-          <Drawing doc={doc} />
+          <Drawing doc={doc} color={diagramColor(detail)} />
         </svg>,
       );
       console.log(`[PDF Export] Rendered flowchart SVG for ID: ${f.id}`);

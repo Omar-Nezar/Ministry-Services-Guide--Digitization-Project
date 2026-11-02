@@ -6,7 +6,7 @@ import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tip } from "@/components/ui/tip";
-import { apiErrorMessage, editorApi, type EditorFlowchart, type EditorService, type GuideImage } from "@/lib/guide-api";
+import { apiErrorMessage, diagramColor, editorApi, type EditorFlowchart, type EditorService, type GuideImage } from "@/lib/guide-api";
 import { DiagramEditor } from "./diagram-editor";
 import { EntryRow } from "./entry-row";
 import { downloadDocx } from "./export-docx";
@@ -267,7 +267,7 @@ export function ServiceEditor() {
                 deleteLabel={t("حذف المخطط", "Delete flowchart")}
               />
             )}
-            <DiagramEditor flowchart={f} onDirty={markDirty} />
+            <DiagramEditor flowchart={f} color={diagramColor(service)} onDirty={markDirty} />
           </div>
         ))}
         {service.flowcharts.length === 0 && <p className="text-sm text-muted-foreground">{t("لا توجد مخططات.", "No flowcharts yet.")}</p>}

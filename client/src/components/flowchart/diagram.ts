@@ -676,3 +676,117 @@ export function sheetsOf(
       doc: s.doc!,
     }));
 }
+// ---- category theme ------------------------------------------------------------------
+// The whole drawing is shaded from one colour, the category's colour for the workflow label: solid lane headers,
+// tinted lane columns, dark start/end, mid-tone decisions, light processes. It is applied when drawing, so the stored
+// diagrams (Excel imports included) are not changed.
+
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function toHsl(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2, d = max - min;
+  if (!d) return [0, 0, l];
+  const s = d / (1 - Math.abs(2 * l - 1));
+  const h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return [h * 60, s, l];
+}
+
+function fromHsl(h: number, s: number, l: number): string {
+  const a = s * Math.min(l, 1 - l);
+  const f = (n: number) => {
+    const k = (n + h / 30) % 12;
+    return Math.round(255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0");
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function shades(base: string) {
+  const [h, s, l] = toHsl(base);
+  const t = Math.min(s, 0.6);
+  return {
+    header: base,
+    headerText: l > 0.6 ? "#1f2937" : "#ffffff",
+    ink: fromHsl(h, s, Math.min(l, 0.3)),
+    body: fromHsl(h, t, 0.96),
+    step: fromHsl(h, t, 0.88),
+    stepLine: base,
+    terminal: fromHsl(h, s, Math.min(l, 0.4) * 0.65),
+    terminalLine: fromHsl(h, s, Math.min(l, 0.4) * 0.45),
+    decision: base,
+    decisionLine: fromHsl(h, s, Math.min(l, 0.4) * 0.6),
+  };
+}
+
+const LINE_COLOR = "#374151";
+const eq = (a: number, b: number, t = 2) => Math.abs(a - b) <= t;
+const isGray = (c?: string) => c?.toLowerCase() === "#d9d9d9";
+const oneOf = (c: string, list: string[]) => list.includes(c.toLowerCase());
+const white = (t: CopyText): CopyText => ({ ...t, paras: t.paras.map((p) => ({ ...p, color: "#ffffff" })) });
+
+/**
+ * Recolours a diagram in shades of `base`.
+ * Every lane gets a solid header and a tinted column down to the bottom of the diagram; `bg` holds those column
+ * backgrounds (drawn under the cells, so the cell indexes stay the same).
+ */
+export function themeDoc(doc: CopyDoc, base?: string | null): CopyDoc {
+  if (!base || !HEX.test(base)) return doc;
+  const k = shades(base);
+  const cells = doc.cells.map((c) => ({ ...c }));
+  const plain = (f?: string) => !f || f.toLowerCase() === "#ffffff";
+
+  // lane headers: the last row of gray cells (the rows above it are info bars)
+  const grays = cells.filter((c) => isGray(c.fill) && c.w > 0 && c.h <= 260);
+  const rowY = Math.max(-1, ...grays.filter((c) => c.text?.trim()).map((c) => c.y));
+  const headers = rowY < 0 ? [] : grays.filter((c) => eq(c.y, rowY));
+  grays.forEach((c) => {
+    if (headers.includes(c)) return;
+    c.fill = k.step;
+    c.color = k.ink;
+  });
+  headers.forEach((h) => {
+    h.fill = k.header;
+    h.color = k.headerText;
+  });
+
+  // the title / time lines above the lanes: the category colour instead of blue, navy or red
+  cells.forEach((c) => {
+    if (c.text?.trim() && !c.fill && c.color && !oneOf(c.color, ["#000000", "#ffffff"])) c.color = k.ink;
+  });
+
+  const bg: CopyCell[] = [];
+  if (headers.length) {
+    const inLane = (h: CopyCell, x: number) => x >= h.x - 1 && x <= h.x + h.w + 1;
+    const bottoms = headers.map((h) => {
+      const top = h.y + h.h;
+      const ys = [
+        ...cells.filter((c) => !headers.includes(c) && c.y >= top - 2 && c.w <= h.w * 1.3 && inLane(h, c.x + c.w / 2)).map((c) => c.y + c.h),
+        ...doc.shapes.filter((s) => inLane(h, s.x + s.w / 2)).map((s) => s.y + s.h + 20),
+      ];
+      return Math.max(top, ...ys);
+    });
+    const bottom = Math.max(...bottoms);
+    headers.forEach((h) => bg.push({ x: h.x, y: h.y + h.h, w: h.w, h: bottom - (h.y + h.h), fill: k.body }));
+    cells.forEach((c) => {
+      if (headers.includes(c) || !plain(c.fill)) return;
+      const h = headers.find((x) => c.y >= x.y + x.h - 2 && c.w <= x.w * 1.3 && inLane(x, c.x + c.w / 2));
+      if (h) c.fill = k.body;
+    });
+  }
+
+  // by role, whatever fill the shape came with: start/end, decisions (and their yes/no boxes), everything else a process
+  const shapes = doc.shapes.map((s) => {
+    const fill = s.fill.toLowerCase();
+    if (s.img || s.prst === "star4" || (fill === "none" && s.stroke === "none")) return s;
+    const [, sat, light] = HEX.test(fill) ? toHsl(fill) : [0, 0, 1];
+    const strong = sat > 0.2 && light < 0.75;
+    const terminal = s.prst === "ellipse" || s.prst === "flowChartTerminator" || (s.prst === "flowChartConnector" && strong);
+    const decision = s.prst === "diamond" || s.prst === "flowChartDecision" || (s.prst === "rect" && strong);
+    if (terminal) return { ...s, fill: k.terminal, stroke: k.terminalLine, text: s.text && white(s.text) };
+    if (decision) return { ...s, fill: k.decision, stroke: k.decisionLine, text: s.text && white(s.text) };
+    return { ...s, fill: k.step, stroke: k.stepLine };
+  });
+
+  return { ...doc, cells, shapes, bg, lines: doc.lines.map((l) => ({ ...l, color: LINE_COLOR })) };
+}

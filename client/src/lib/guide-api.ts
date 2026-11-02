@@ -196,3 +196,7 @@ export const flowchartTitle = (f: { title: string | null }, fallback: string) =>
 
 /** The colour of a category's labels when it has none set (the ministry's sea blue). */
 export const DEFAULT_LABEL_COLOR = "#074169";
+
+/** The colour the service's diagrams are drawn in: its category's colour for the workflow label. */
+export const diagramColor = (d: { serviceDivision: { color: string | null }; labels: GuideLabel[] }) =>
+  d.labels.find((l) => l.key === "workflow")?.color ?? d.serviceDivision.color ?? DEFAULT_LABEL_COLOR;

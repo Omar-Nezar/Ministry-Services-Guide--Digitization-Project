@@ -58,9 +58,11 @@ const MIN = 30;
  */
 export function DiagramEditor({
   flowchart,
+  color,
   onDirty,
 }: {
   flowchart: EditorFlowchart;
+  color?: string | null;
   onDirty: (key: string, save: () => Promise<unknown>) => void;
 }) {
   const { isArabic } = useLanguage();
@@ -529,6 +531,7 @@ export function DiagramEditor({
               exportDiagramXlsx(
                 docRef.current,
                 titleRef.current.trim(),
+                color,
               ).catch(() =>
                 alert(t("تعذر تصدير الملف.", "Unable to export the file.")),
               )
@@ -719,6 +722,7 @@ export function DiagramEditor({
 
             <Drawing
               doc={doc}
+              color={color}
               sel={sel}
               onShapeDown={onShapeDown}
               onLineDown={(id, e) => {

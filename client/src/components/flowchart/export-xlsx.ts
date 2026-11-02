@@ -1,5 +1,6 @@
 // Writes a diagram (CopyDoc) back to an .xlsx the way Excel stores it: the swimlane cells go in the sheet,
 // shapes and arrows go in its drawing as native Excel shapes. The reverse of the converter's xlsx reader.
+import { themeDoc } from "@/components/flowchart/diagram";
 import type { CopyCell, CopyDoc, CopyLine, CopyShape, CopyText } from "@/components/flowchart/types";
 
 type Pt = [number, number];
@@ -210,7 +211,9 @@ const rels = (items: [string, string, string][]) =>
   `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items.map(([id, type, target]) => `<Relationship Id="${id}" Type="${REL}/${type}" Target="${target}"/>`).join("")}</Relationships>`;
 
 /** Builds the .xlsx file for a diagram. */
-export async function buildDiagramXlsx(doc: CopyDoc): Promise<Blob> {
+export async function buildDiagramXlsx(source: CopyDoc, color?: string | null): Promise<Blob> {
+  const themed = themeDoc(source, color);
+  const doc = { ...themed, cells: [...(themed.bg ?? []), ...themed.cells] };
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
   const put = (name: string, data: string, o?: object) => zip.file(name, data, { createFolders: false, ...o });
@@ -260,8 +263,8 @@ export async function buildDiagramXlsx(doc: CopyDoc): Promise<Blob> {
 }
 
 /** Builds the file and downloads it. Runs entirely in the browser. */
-export async function exportDiagramXlsx(doc: CopyDoc, title: string) {
-  const url = URL.createObjectURL(await buildDiagramXlsx(doc));
+export async function exportDiagramXlsx(doc: CopyDoc, title: string, color?: string | null) {
+  const url = URL.createObjectURL(await buildDiagramXlsx(doc, color));
   const a = document.createElement("a");
   a.href = url;
   a.download = `${(title || doc.title || "مخطط").replace(/[\\/:*?"<>|]+/g, " ").trim()}.xlsx`;
