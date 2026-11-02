@@ -7,6 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, GripVertical, Plus, RotateCcw, 
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ColorPick } from "@/components/ui/color-pick";
 import { Input } from "@/components/ui/input";
 import { Tip } from "@/components/ui/tip";
 import { DEFAULT_LABEL_COLOR, apiErrorMessage, divisionTitle, editorApi, type LabelColor, type SectionLabel } from "@/lib/guide-api";
@@ -212,35 +213,54 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
     void editorApi.labelColors().then(setOverrides);
   }, []);
 
-  const failed = (e: unknown) => alert(apiErrorMessage(e, t("تعذر حفظ اللون.", "Unable to save the colour.")));
+  // Choices are kept here until "Save changes" is pressed; nothing is sent to the server before that.
+  const [baseDraft, setBaseDraft] = useState<Record<number, string | null>>({});
+  const [ovDraft, setOvDraft] = useState<Record<string, string | null>>({});
+  const [saving, setSaving] = useState(false);
+  const key = (divisionId: number, labelId: number) => divisionId + ":" + labelId;
+  const dirty = Object.keys(baseDraft).length + Object.keys(ovDraft).length > 0;
 
-  const setBase = async (divisionId: number, color: string | null) => {
-    setTree((ts) => ts.map((d) => (d.id === divisionId ? { ...d, color } : d)));
-    try {
-      await editorApi.setDivisionColor(divisionId, color);
-    } catch (e) {
-      failed(e);
+  const setBase = (divisionId: number, color: string | null) => setBaseDraft((d) => ({ ...d, [divisionId]: color }));
+  const setOverride = (divisionId: number, labelId: number, color: string | null) =>
+    setOvDraft((d) => ({ ...d, [key(divisionId, labelId)]: color }));
+
+  /** The overrides as they will be after saving. */
+  const effective = (divisionId: number): LabelColor[] => {
+    const rows = overrides.filter((o) => o.serviceDivisionId === divisionId && !(key(divisionId, o.labelId) in ovDraft));
+    for (const l of labels) {
+      const c = ovDraft[key(divisionId, l.id)];
+      if (c) rows.push({ serviceDivisionId: divisionId, labelId: l.id, color: c });
     }
+    return rows;
   };
 
-  const setOverride = async (divisionId: number, labelId: number, color: string | null) => {
-    setOverrides((os) => [
-      ...os.filter((o) => !(o.serviceDivisionId === divisionId && o.labelId === labelId)),
-      ...(color ? [{ serviceDivisionId: divisionId, labelId, color }] : []),
-    ]);
-    try {
-      await editorApi.setLabelColor(divisionId, labelId, color);
-    } catch (e) {
-      failed(e);
-    }
+  const resetAll = (divisionId: number) =>
+    setOvDraft((d) => {
+      const next = { ...d };
+      for (const l of labels) next[key(divisionId, l.id)] = null;
+      return next;
+    });
+
+  const discard = () => {
+    setBaseDraft({});
+    setOvDraft({});
   };
 
-  const resetAll = async (divisionId: number) => {
-    setOverrides((os) => os.filter((o) => o.serviceDivisionId !== divisionId));
+  const save = async () => {
+    setSaving(true);
     try {
-      await editorApi.clearLabelColors(divisionId);
+      for (const [id, color] of Object.entries(baseDraft)) await editorApi.setDivisionColor(Number(id), color);
+      for (const [k, color] of Object.entries(ovDraft)) {
+        const [d, l] = k.split(":").map(Number);
+        await editorApi.setLabelColor(d, l, color);
+      }
+      setTree((ts) => ts.map((d) => (d.id in baseDraft ? { ...d, color: baseDraft[d.id] } : d)));
+      setOverrides(await editorApi.labelColors());
+      discard();
     } catch (e) {
-      failed(e);
+      alert(apiErrorMessage(e, t("تعذر حفظ اللون.", "Unable to save the colour.")));
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -257,9 +277,10 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {tree?.map((d) => {
-          const mine = overrides.filter((o) => o.serviceDivisionId === d.id);
+          const mine = effective(d.id);
+          const color = d.id in baseDraft ? baseDraft[d.id] : d.color;
           const isOpen = open === d.id;
-          const base = d.color ?? DEFAULT_LABEL_COLOR;
+          const base = color ?? DEFAULT_LABEL_COLOR;
           return (
             <div key={d.id} className="rounded-lg border bg-card">
               <div className="flex flex-wrap items-center gap-3 p-3">
@@ -275,23 +296,22 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
                           key={p}
                           type="button"
                           aria-label={p}
-                          onClick={() => void setBase(d.id, p)}
+                          onClick={() => setBase(d.id, p)}
                           style={{ background: p }}
-                          className={`size-6 rounded-full border-2 ${d.color === p ? "border-foreground" : "border-transparent"}`}
+                          className={`size-6 rounded-full border-2 ${color === p ? "border-foreground" : "border-transparent"}`}
                         />
                       ))}
                       <Tip label={t("لون مخصص", "Custom colour")}>
-                        <input
-                          type="color"
+                        <ColorPick
                           aria-label={t("لون مخصص", "Custom colour")}
                           value={base}
-                          onChange={(e) => void setBase(d.id, e.target.value)}
+                          onCommit={(c) => setBase(d.id, c)}
                           className="size-7 cursor-pointer rounded border bg-transparent p-0.5"
                         />
                       </Tip>
                     </div>
-                    {d.color && (
-                      <Button type="button" size="sm" variant="ghost" onClick={() => void setBase(d.id, null)}>
+                    {color && (
+                      <Button type="button" size="sm" variant="ghost" onClick={() => setBase(d.id, null)}>
                         {t("اللون الافتراضي", "Default colour")}
                       </Button>
                     )}
@@ -311,19 +331,18 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
                     const own = mine.find((o) => o.labelId === l.id)?.color;
                     return (
                       <div key={l.id} className="flex items-center gap-2">
-                        <input
-                          type="color"
+                        <ColorPick
                           aria-label={l.name}
                           value={own ?? base}
-                          onChange={(e) => void setOverride(d.id, l.id, e.target.value)}
+                          onCommit={(c) => setOverride(d.id, l.id, c)}
                           className="size-8 cursor-pointer rounded border bg-transparent p-0.5"
                         />
                         <span className="flex-1 text-sm">{l.name}</span>
                         <span className="text-xs text-muted-foreground">
-                          {own ? t("مخصص", "Custom") : d.color ? t("لون المجال", "Category colour") : t("الافتراضي", "Default")}
+                          {own ? t("مخصص", "Custom") : color ? t("لون المجال", "Category colour") : t("الافتراضي", "Default")}
                         </span>
                         <Tip label={t("العودة للون المجال", "Back to the category colour")}>
-                          <Button type="button" size="icon-sm" variant="ghost" aria-label={t("العودة للون المجال", "Back to the category colour")} disabled={!own} onClick={() => void setOverride(d.id, l.id, null)}>
+                          <Button type="button" size="icon-sm" variant="ghost" aria-label={t("العودة للون المجال", "Back to the category colour")} disabled={!own} onClick={() => setOverride(d.id, l.id, null)}>
                             <RotateCcw />
                           </Button>
                         </Tip>
@@ -331,7 +350,7 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
                     );
                   })}
                   {mine.length > 0 && (
-                    <Button type="button" size="sm" variant="ghost" className="self-start" onClick={() => void resetAll(d.id)}>
+                    <Button type="button" size="sm" variant="ghost" className="self-start" onClick={() => resetAll(d.id)}>
                       {t("إزالة كل التخصيصات", "Remove all customisations")}
                     </Button>
                   )}
@@ -341,6 +360,17 @@ function CategoryColors({ labels }: { labels: SectionLabel[] }) {
           );
         })}
         {!tree && <p className="text-sm text-muted-foreground">{t("جارٍ التحميل…", "Loading…")}</p>}
+        {dirty && (
+          <div className="sticky bottom-2 flex items-center justify-end gap-2 rounded-lg border bg-card p-2 shadow-md">
+            <span className="me-auto text-xs text-muted-foreground">{t("تغييرات غير محفوظة", "Unsaved changes")}</span>
+            <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={discard}>
+              {t("تجاهل", "Discard")}
+            </Button>
+            <Button type="button" size="sm" disabled={saving} onClick={() => void save()}>
+              {saving ? t("جارٍ الحفظ…", "Saving…") : t("حفظ التغييرات", "Save changes")}
+            </Button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

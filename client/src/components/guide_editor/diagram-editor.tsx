@@ -15,6 +15,7 @@ import {
 import { editorApi, type EditorFlowchart } from "@/lib/guide-api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ColorPick } from "@/components/ui/color-pick";
 import { Input } from "@/components/ui/input";
 import { Drawing } from "@/components/flowchart/copy-canvas";
 import { exportDiagramXlsx } from "@/components/flowchart/export-xlsx";
@@ -1376,10 +1377,9 @@ function ColorInput({
 }) {
   return (
     <Field label={label}>
-      <input
-        type="color"
+      <ColorPick
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onCommit={onChange}
         className="size-8 cursor-pointer rounded border bg-transparent p-0.5"
       />
     </Field>
