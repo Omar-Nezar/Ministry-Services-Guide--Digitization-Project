@@ -10,6 +10,7 @@ adminRouter.use(authenticateSession, requireRole("admin"));
 adminRouter.get("/dashboard", admin.getDashboard);
 
 adminRouter.get("/staff", admin.listStaff);
+adminRouter.post("/staff", admin.createStaff);
 adminRouter.patch("/staff/:id", admin.updateStaff);
 adminRouter.delete("/staff/:id", admin.deleteStaff);
 

@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { randomBytes } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@db";
-import { verifyPassword } from "@/utils/password.js";
+import { hashPassword, verifyPassword } from "@/utils/password.js";
 import {
   createCsrfToken,
   hashSessionId,
@@ -93,6 +93,7 @@ export async function loginUser(
       email: user.email,
       roles,
       departments,
+      mustChangePassword: user.mustChangePassword,
       csrfToken: createCsrfToken(sessionId),
       expiresAt: expiresAt.toISOString(),
       expiresInMs: Math.max(0, expiresAt.getTime() - Date.now()),
@@ -144,6 +145,7 @@ export async function getCurrentUser(
       email: user.email,
       roles,
       departments,
+      mustChangePassword: user.mustChangePassword,
       csrfToken: request.csrfToken,
       expiresAt: request.sessionExpiresAt.toISOString(),
       expiresInMs: Math.max(0, request.sessionExpiresAt.getTime() - Date.now()),
@@ -151,6 +153,55 @@ export async function getCurrentUser(
   } catch (error: unknown) {
     console.error("Failed to get current user.", error);
     response.status(500).json({ error: "Unable to get user right now." });
+  }
+}
+
+export const MIN_PASSWORD_LENGTH = 8;
+
+/** { currentPassword?, newPassword }: the current password is only asked once the first-login step is done. */
+export async function changePassword(request: AuthenticatedRequest, response: Response): Promise<void> {
+  if (!request.user) {
+    response.status(401).json({ error: "Authentication required." });
+    return;
+  }
+
+  const body: Record<string, unknown> =
+    typeof request.body === "object" && request.body !== null ? request.body : {};
+  const newPassword = body["newPassword"];
+  if (typeof newPassword !== "string" || newPassword.length < MIN_PASSWORD_LENGTH || newPassword.length > 1024) {
+    response.status(400).json({ error: `The password must be at least ${MIN_PASSWORD_LENGTH} characters.` });
+    return;
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id: request.user.userId } });
+    if (!user) {
+      response.status(404).json({ error: "User not found." });
+      return;
+    }
+
+    if (!user.mustChangePassword) {
+      const current = body["currentPassword"];
+      if (typeof current !== "string" || !(await verifyPassword(user.passwordHash, current))) {
+        response.status(400).json({ error: "The current password is incorrect." });
+        return;
+      }
+    }
+    if (await verifyPassword(user.passwordHash, newPassword)) {
+      response.status(400).json({ error: "Choose a password different from the current one." });
+      return;
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: user.id }, data: { passwordHash, mustChangePassword: false } }),
+      // Any other signed-in device has to sign in again with the new password
+      prisma.session.deleteMany({ where: { userId: user.id, id: { not: hashSessionId(request.sessionId ?? "") } } }),
+    ]);
+    response.status(200).json({ ok: true });
+  } catch (error: unknown) {
+    console.error("Failed to change the password.", error);
+    response.status(500).json({ error: "Unable to change the password right now." });
   }
 }
 

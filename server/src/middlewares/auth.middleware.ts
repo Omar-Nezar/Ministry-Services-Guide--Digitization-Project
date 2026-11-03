@@ -19,6 +19,7 @@ export interface AuthenticatedRequest extends Request {
   /** Roles and divisions are loaded from the database for each request. */
   user?: AuthenticatedUser;
   userName?: string;
+  mustChangePassword?: boolean;
   sessionId?: string;
   csrfToken?: string;
   sessionExpiresAt?: Date;
@@ -28,7 +29,20 @@ function isSafeMethod(method: string): boolean {
   return method === "GET" || method === "HEAD" || method === "OPTIONS";
 }
 
-export async function authenticateSession(request: Request, response: Response, next: NextFunction): Promise<void> {
+/** Signed in, and allowed to go on even while a new password is still due (/auth/me, /refresh, /logout, /password). */
+export const authenticatePendingSession = (request: Request, response: Response, next: NextFunction) =>
+  authenticate(request, response, next, true);
+
+/** Signed in, and past the first-login password step. */
+export const authenticateSession = (request: Request, response: Response, next: NextFunction) =>
+  authenticate(request, response, next, false);
+
+async function authenticate(
+  request: Request,
+  response: Response,
+  next: NextFunction,
+  allowPasswordPending: boolean,
+): Promise<void> {
   const sessionId = getSessionIdFromCookie(request.headers.cookie);
   if (!sessionId) {
     clearSessionCookie(response);
@@ -60,6 +74,11 @@ export async function authenticateSession(request: Request, response: Response, 
       return;
     }
 
+    if (session.user.mustChangePassword && !allowPasswordPending) {
+      response.status(403).json({ error: "You must set a new password first.", code: "PASSWORD_CHANGE_REQUIRED" });
+      return;
+    }
+
     const authenticated = request as AuthenticatedRequest;
     authenticated.sessionId = sessionId;
     authenticated.csrfToken = createCsrfToken(sessionId);
@@ -73,6 +92,7 @@ export async function authenticateSession(request: Request, response: Response, 
       ),
     };
     authenticated.userName = session.user.name;
+    authenticated.mustChangePassword = session.user.mustChangePassword;
 
     if (!isSafeMethod(request.method)) {
       const suppliedToken = request.get("X-CSRF-Token") ?? "";

@@ -102,6 +102,8 @@ export interface StaffMember {
   name: string;
   email: string;
   isActive: boolean;
+  /** Still on the temporary password: has not signed in yet */
+  mustChangePassword: boolean;
   createdAt: string;
   divisions: { id: number; name: string; nameAr: string | null }[];
 }
@@ -167,7 +169,9 @@ export const editorApi = {
 export const adminApi = {
   dashboard: () => get<Dashboard>("/admin/dashboard"),
   staff: () => get<StaffMember[]>("/admin/staff"),
-  updateStaff: (id: number, data: { name?: string; divisionId?: number; isActive?: boolean }) =>
+  createStaff: (data: { name: string; email: string; divisionIds: number[] }) =>
+    api.post<StaffMember & { temporaryPassword: string }>("/admin/staff", data).then((r) => r.data),
+  updateStaff: (id: number, data: { name?: string; divisionIds?: number[]; isActive?: boolean }) =>
     api.patch<StaffMember>(`/admin/staff/${id}`, data).then((r) => r.data),
   deleteStaff: (id: number) => api.delete(`/admin/staff/${id}`),
 };

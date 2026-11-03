@@ -8,6 +8,8 @@ export type AuthUser = {
   email: string;
   roles: string[];
   departments: string[];
+  /** An admin created the account: the first sign-in must set a new password */
+  mustChangePassword: boolean;
 };
 
 type AuthSession = {
@@ -46,7 +48,8 @@ function isAuthUser(value: unknown): value is AuthUser {
     Array.isArray(user.roles) &&
     user.roles.every((role: unknown) => typeof role === "string") &&
     Array.isArray(user.departments) &&
-    user.departments.every((department: unknown) => typeof department === "string")
+    user.departments.every((department: unknown) => typeof department === "string") &&
+    typeof user.mustChangePassword === "boolean"
   );
 }
 
@@ -138,6 +141,21 @@ export const loginUser = createAsyncThunk<
     return session;
   } catch (error: unknown) {
     console.error("Unable to reach the login service.", error);
+    const errorData = axios.isAxiosError(error) ? error.response?.data : null;
+    return rejectWithValue(
+      getApiError(errorData) ?? "Unable to reach the server. Check that the API is running.",
+    );
+  }
+});
+
+export const setNewPassword = createAsyncThunk<
+  void,
+  { newPassword: string },
+  { rejectValue: string }
+>("auth/setNewPassword", async ({ newPassword }, { rejectWithValue }) => {
+  try {
+    await api.post("/auth/password", { newPassword });
+  } catch (error: unknown) {
     const errorData = axios.isAxiosError(error) ? error.response?.data : null;
     return rejectWithValue(
       getApiError(errorData) ?? "Unable to reach the server. Check that the API is running.",
@@ -320,6 +338,18 @@ const authSlice = createSlice({
       .addCase(checkCurrentSession.rejected, (state, action) => {
         state.isCheckingSession = false;
         state.sessionCheckError = action.payload || null;
+      })
+      .addCase(setNewPassword.pending, (state) => {
+        state.status = "loading";
+        state.error = null;
+      })
+      .addCase(setNewPassword.fulfilled, (state) => {
+        state.status = "succeeded";
+        if (state.user) state.user.mustChangePassword = false;
+      })
+      .addCase(setNewPassword.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.payload ?? "Unable to change the password.";
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.status = "failed";

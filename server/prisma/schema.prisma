@@ -14,9 +14,11 @@ model User {
   passwordHash     String                @db.NVarChar(255)
   /// A disabled account cannot sign in, and its existing tokens stop working
   isActive         Boolean               @default(true)
+  /// Set when an admin creates the account: the person must choose their own password on first sign-in
+  mustChangePassword Boolean             @default(false)
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
-  roles            UserRole[]
+  roles           UserRole[]
   serviceDivisions UserServiceDivision[]
   serviceAuditEntries ServiceAudit[]
   sessions         Session[]

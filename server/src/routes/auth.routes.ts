@@ -1,12 +1,13 @@
 import { Router } from "express";
 import {
+  changePassword,
   deleteUser,
   getCurrentUser,
   loginUser,
   logoutUser,
   refreshSession,
 } from "../controllers/auth.controller.js";
-import { authenticateSession } from "../middlewares/auth.middleware.js";
+import { authenticatePendingSession, authenticateSession } from "../middlewares/auth.middleware.js";
 import {
   requireAccess,
   requireDivision,
@@ -21,9 +22,10 @@ authRouter.use((_request, response, next) => {
 });
 
 authRouter.post("/login", loginUser);
-authRouter.get("/me", authenticateSession, getCurrentUser);
-authRouter.post("/refresh", authenticateSession, refreshSession);
-authRouter.post("/logout", authenticateSession, logoutUser);
+authRouter.get("/me", authenticatePendingSession, getCurrentUser);
+authRouter.post("/refresh", authenticatePendingSession, refreshSession);
+authRouter.post("/logout", authenticatePendingSession, logoutUser);
+authRouter.post("/password", authenticatePendingSession, changePassword);
 
 authRouter.get(
   "/admin/dashboard",

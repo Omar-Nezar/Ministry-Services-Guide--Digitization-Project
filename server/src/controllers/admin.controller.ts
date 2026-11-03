@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
+import { randomBytes } from "node:crypto";
 import { prisma } from "@db";
+import { hashPassword } from "@/utils/password.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 
 // The admin API (see admin.routes.ts): the dashboard and the staff accounts. Admins only.
@@ -37,7 +39,8 @@ export async function getDashboard(_request: Request, response: Response): Promi
 }
 
 // ---------------------------------------------------------------------------
-// Staff accounts (users with the "staff" role). Accounts are added in the database, not here.
+// Staff accounts (users with the "staff" role): added here with a temporary password,
+// which the person replaces the first time they sign in.
 // ---------------------------------------------------------------------------
 
 const staffSelect = {
@@ -65,7 +68,48 @@ export async function listStaff(_request: Request, response: Response): Promise<
 
 const idParam = (request: Request): number => Number(request.params["id"]);
 
-/** { name?, divisionId?, isActive? } */
+/** The ids of existing categories: at least one, no repeats. Null when the list is not valid. */
+async function divisionIdsOf(value: unknown): Promise<number[] | null> {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  const ids = [...new Set(value.map(Number))];
+  if (!ids.every((id) => Number.isInteger(id) && id > 0)) return null;
+  const found = await prisma.serviceDivision.count({ where: { id: { in: ids } } });
+  return found === ids.length ? ids : null;
+}
+
+const NO_CATEGORY = "Select at least one existing category.";
+
+/** { name, email, divisionIds }: answers with the new account and its temporary password (shown once). */
+export async function createStaff(request: Request, response: Response): Promise<void> {
+  const body = bodyOf(request);
+  const name = text(body["name"], 200);
+  if (!name) return bad(response, "Provide a name.");
+  const email = text(body["email"], 320)?.toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return bad(response, "Provide a valid email.");
+  const divisionIds = await divisionIdsOf(body["divisionIds"]);
+  if (!divisionIds) return bad(response, NO_CATEGORY);
+  if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) {
+    return void response.status(409).json({ error: "An account with this email already exists." });
+  }
+  const role = await prisma.role.findUnique({ where: { name: "staff" } });
+  if (!role) return void response.status(500).json({ error: 'The "staff" role does not exist.' });
+
+  const temporaryPassword = randomBytes(9).toString("base64url");
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      passwordHash: await hashPassword(temporaryPassword),
+      mustChangePassword: true,
+      roles: { create: { roleId: role.id } },
+      serviceDivisions: { create: divisionIds.map((serviceDivisionId) => ({ serviceDivisionId })) },
+    },
+    select: staffSelect,
+  });
+  response.status(201).json({ ...staffJson(user), temporaryPassword });
+}
+
+/** { name?, divisionIds?, isActive? } */
 export async function updateStaff(request: Request, response: Response): Promise<void> {
   const id = idParam(request);
   const member = await prisma.user.findFirst({ where: { id, ...staffOnly }, select: { id: true } });

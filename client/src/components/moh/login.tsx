@@ -17,7 +17,7 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { loginUser, logoutUser } from "@/slices/auth.slice";
+import { loginUser, logoutUser, setNewPassword } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
 
 const arabicLoginErrors: Record<string, string> = {
@@ -31,9 +31,91 @@ const arabicLoginErrors: Record<string, string> = {
   "Unable to log in right now.": "يتعذر تسجيل الدخول الآن.",
   "This account is disabled. Contact an administrator.":
     "هذا الحساب معطل. تواصل مع مدير النظام.",
+  "Choose a password different from the current one.": "اختر كلمة مرور مختلفة عن الحالية.",
+  "Unable to change the password right now.": "تعذر تغيير كلمة المرور الآن.",
   "Unable to sign out. Please try again.": "تعذر تسجيل الخروج. يرجى المحاولة مرة أخرى.",
   "Invalid CSRF token.": "تعذر إكمال تسجيل الخروج. يرجى إعادة المحاولة.",
 };
+
+const inputClass =
+  "h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30";
+const MIN_PASSWORD_LENGTH = 8;
+
+/** First sign-in of an account an admin created: the person replaces the temporary password with their own. */
+function SetPasswordForm() {
+  const { isArabic } = useLanguage();
+  const dispatch = useDispatch<AppDispatch>();
+  const status = useSelector((state: RootState) => state.auth.status);
+  const serverError = useSelector((state: RootState) => state.auth.error);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [mismatch, setMismatch] = useState(false);
+
+  async function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMismatch(password !== confirm);
+    if (password !== confirm) return;
+    await dispatch(setNewPassword({ newPassword: password }));
+  }
+
+  const error = mismatch
+    ? isArabic ? "كلمتا المرور غير متطابقتين." : "The passwords do not match."
+    : serverError
+      ? isArabic ? arabicLoginErrors[serverError] ?? serverError : serverError
+      : null;
+
+  return (
+    <form className="space-y-5" onSubmit={handleSubmit}>
+      <p className="text-sm text-muted-foreground">
+        {isArabic
+          ? "هذا أول تسجيل دخول لك. اختر كلمة مرور خاصة بك للمتابعة."
+          : "This is your first sign-in. Choose your own password to continue."}
+      </p>
+      <FieldGroup>
+        <Field className="space-y-2">
+          <FieldLabel htmlFor="new-password" className="text-sm font-medium leading-none">
+            {isArabic ? "كلمة المرور الجديدة" : "New password"}
+          </FieldLabel>
+          <input
+            id="new-password"
+            type="password"
+            autoComplete="new-password"
+            required
+            minLength={MIN_PASSWORD_LENGTH}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className={inputClass}
+          />
+          <p className="text-xs text-muted-foreground">
+            {isArabic ? `${MIN_PASSWORD_LENGTH} أحرف على الأقل.` : `At least ${MIN_PASSWORD_LENGTH} characters.`}
+          </p>
+        </Field>
+        <Field className="space-y-2">
+          <FieldLabel htmlFor="confirm-password" className="text-sm font-medium leading-none">
+            {isArabic ? "تأكيد كلمة المرور" : "Confirm password"}
+          </FieldLabel>
+          <input
+            id="confirm-password"
+            type="password"
+            autoComplete="new-password"
+            required
+            value={confirm}
+            onChange={(event) => setConfirm(event.target.value)}
+            className={inputClass}
+          />
+        </Field>
+        {error && (
+          <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+      </FieldGroup>
+      <Button type="submit" className="w-full" disabled={status === "loading"}>
+        {isArabic ? "حفظ كلمة المرور" : "Save password"}
+      </Button>
+    </form>
+  );
+}
 
 export function Login() {
   const { isArabic } = useLanguage();
@@ -85,7 +167,9 @@ export function Login() {
             </CardHeader>
 
             <CardContent className="px-6 pb-7">
-              {user ? (
+              {user?.mustChangePassword ? (
+                <SetPasswordForm />
+              ) : user ? (
                 <div className="space-y-5" aria-live="polite">
                   <div className="rounded-lg border border-border bg-muted/40 p-4">
                     <p className="font-medium">
