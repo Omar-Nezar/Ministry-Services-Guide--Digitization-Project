@@ -44,7 +44,7 @@ export function Home() {
   const { isArabic } = useLanguage();
   const [pdf, setPdf] = useState({ busy: false, failed: false, done: 0, total: 0 });
 
-  // trial: loaded on click so the pdf code stays out of the main bundle
+  // Keep the PDF export code out of the main bundle until it is requested.
   async function downloadPdf() {
     setPdf({ busy: true, failed: false, done: 0, total: 0 });
     try {
