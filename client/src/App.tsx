@@ -36,6 +36,10 @@ const LabelsPage = lazy(() =>
   import("@/components/guide_editor/labels-page").then((m) => ({ default: m.LabelsPage }))
 );
 
+const PdfPagesPage = lazy(() =>
+  import("@/components/guide_editor/pdf-pages-page").then((m) => ({ default: m.PdfPagesPage }))
+);
+
 function AppRoutes() {
   const dispatch = useDispatch<AppDispatch>();
   const initialized = useSelector((state: RootState) => state.auth.initialized);
@@ -90,6 +94,7 @@ function AppRoutes() {
         <Route path="service/:serviceId" element={<ServiceEditor />} />
         <Route path="labels" element={<LabelsPage />} />
         <Route path="staff" element={<StaffPage />} />
+        <Route path="pdf" element={<PdfPagesPage />} />
       </Route>
 
       <Route

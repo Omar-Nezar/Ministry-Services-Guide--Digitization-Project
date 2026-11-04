@@ -1,0 +1,121 @@
+{
+  "pages": [
+    {
+      "slot": "start",
+      "division": null,
+      "size": "A4",
+      "orientation": "portrait",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731213634-417595.jpg"
+    },
+    {
+      "slot": "end",
+      "division": null,
+      "size": "A4",
+      "orientation": "portrait",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731219505-967025.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Lands",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731220826-895600.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Urban Planning",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731222159-910657.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Social Housing and Projects",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731223494-662928.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Real Estate Registry",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731224848-525697.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Real Estate Development",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731226131-109948.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Real Estate Brokerage",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731227429-731155.jpg"
+    },
+    {
+      "slot": "before",
+      "division": "Client Services",
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 0,
+      "file": "1793731228731-854821.jpg"
+    },
+    {
+      "slot": "start",
+      "division": null,
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 1,
+      "file": "1793731215133-284628.jpg"
+    },
+    {
+      "slot": "start",
+      "division": null,
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 2,
+      "file": "1793731216529-545808.jpg"
+    },
+    {
+      "slot": "start",
+      "division": null,
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 3,
+      "file": "1793731217954-725627.jpg"
+    },
+    {
+      "slot": "start",
+      "division": null,
+      "size": "A3",
+      "orientation": "landscape",
+      "fit": "contain",
+      "order": 4,
+      "file": "1793731219345-789272.jpg"
+    }
+  ]
+}

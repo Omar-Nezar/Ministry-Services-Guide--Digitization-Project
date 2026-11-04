@@ -136,6 +136,52 @@ async function seedServices(file = DATA_FILE): Promise<void> {
   if (sectionLabels) await seedLabelsWithColors(sectionLabels);
 }
 
+/** The pages of the exported PDF (PDF pages tab). Loaded only into an empty table, so a re-seed never undoes the admin's edits. */
+async function seedPdfPages(file = path.join(process.cwd(), "prisma", "seed", "pdf-pages.json")): Promise<void> {
+  let text: string;
+  try {
+    text = await readFile(file, "utf8");
+  } catch {
+    console.log(`No ${path.relative(process.cwd(), file)}, PDF pages skipped.`);
+    return;
+  }
+  if ((await prisma.pdfPage.count()) > 0) {
+    console.log("PDF pages already exist, skipped.");
+    return;
+  }
+  const { pages } = JSON.parse(text) as {
+    pages: { slot: string; division: string | null; size: string; orientation: string; fit: string; order: number; file: string }[];
+  };
+  await mkdir(UPLOAD_DIR, { recursive: true });
+  let created = 0;
+  for (const p of pages) {
+    const division = p.division ? await prisma.serviceDivision.findUnique({ where: { name: p.division }, select: { id: true } }) : null;
+    if (p.division && !division) {
+      console.log(`  PDF page skipped, no category "${p.division}".`);
+      continue;
+    }
+    try {
+      await copyFile(path.join(IMAGE_SEED_DIR, p.file), path.join(UPLOAD_DIR, p.file));
+    } catch {
+      console.log(`  Picture file ${p.file} is missing from prisma/seed/images, skipped.`);
+      continue;
+    }
+    await prisma.pdfPage.create({
+      data: {
+        slot: p.slot,
+        serviceDivisionId: division?.id ?? null,
+        size: p.size,
+        orientation: p.orientation,
+        imageFit: p.fit,
+        order: p.order,
+        imagePath: `uploads/${p.file}`,
+      },
+    });
+    created++;
+  }
+  console.log(`PDF pages: ${created} loaded.`);
+}
+
 /** The labels' names, order and per-category colours as exported from the editor. */
 async function seedLabelsWithColors(labels: SeedLabel[]): Promise<void> {
   for (const l of labels) {
@@ -275,6 +321,7 @@ async function main() {
   }
 
   await seedServices();
+  await seedPdfPages();
   await seedSectionLabels(prisma); // adds the default labels when services.json has none
 
   await seedTestUsers();

@@ -59,6 +59,7 @@ model ServiceDivision {
   users       UserServiceDivision[]
   services    Service[]
   labelColors DivisionLabelColor[]
+  pdfPages    PdfPage[]
 
   @@map("service_divisions")
 }
@@ -199,4 +200,25 @@ model DivisionLabelColor {
   color             String          @db.NVarChar(20)
 
   @@unique([serviceDivisionId, labelId])
+}
+
+/// A full-page picture the admin adds to the exported PDF (A3 or A4, either orientation).
+/// slot: start (before the cover), end (after everything), before | after (a category, see serviceDivisionId).
+/// Pages of a slot are printed in `order`; categories follow the order of the guide itself.
+model PdfPage {
+  id                Int              @id @default(autoincrement())
+  slot              String           @db.VarChar(10)
+  serviceDivisionId Int?
+  serviceDivision   ServiceDivision? @relation(fields: [serviceDivisionId], references: [id], onDelete: Cascade)
+  /// A3 | A4
+  size              String           @default("A4") @db.VarChar(2)
+  /// landscape | portrait
+  orientation       String           @default("portrait") @db.VarChar(10)
+  /// contain | cover
+  imageFit          String           @default("contain") @db.VarChar(20)
+  imagePath         String           @db.NVarChar(400)
+  order             Int              @default(0)
+  createdAt         DateTime         @default(now())
+
+  @@index([slot, serviceDivisionId])
 }

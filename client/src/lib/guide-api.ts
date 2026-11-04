@@ -79,6 +79,19 @@ export interface LabelColor {
   color: string;
 }
 
+/** A picture page of the exported PDF, added by an admin. */
+export interface PdfPage {
+  id: number;
+  /** start: before everything · end: after everything · before | after: around a category */
+  slot: "start" | "end" | "before" | "after";
+  serviceDivisionId: number | null;
+  size: "A3" | "A4";
+  orientation: "portrait" | "landscape";
+  imageFit: "contain" | "cover";
+  imagePath: string;
+  order: number;
+}
+
 // ---- the admin dashboard and staff accounts (/admin/..., admins only) ----
 
 export interface LatestUpdate {
@@ -123,6 +136,7 @@ export const guideApi = {
   division: (id: number, signal?: AbortSignal) => get<DivisionDetail>(`/guide/divisions/${id}`, signal),
   service: (id: number, signal?: AbortSignal) => get<ServiceDetail>(`/guide/services/${id}`, signal),
   flowchart: (id: number, signal?: AbortSignal) => get<unknown>(`/guide/flowcharts/${id}`, signal),
+  pdfPages: (signal?: AbortSignal) => get<PdfPage[]>("/guide/pdf-pages", signal),
 };
 
 export const editorApi = {
@@ -174,6 +188,19 @@ export const adminApi = {
   updateStaff: (id: number, data: { name?: string; divisionIds?: number[]; isActive?: boolean }) =>
     api.patch<StaffMember>(`/admin/staff/${id}`, data).then((r) => r.data),
   deleteStaff: (id: number) => api.delete(`/admin/staff/${id}`),
+
+  addPdfPage: (file: File, where: { slot: PdfPage["slot"]; serviceDivisionId?: number }, size: PdfPage["size"], orientation: PdfPage["orientation"]) => {
+    const form = pictureForm(file);
+    form.append("slot", where.slot);
+    if (where.serviceDivisionId) form.append("serviceDivisionId", String(where.serviceDivisionId));
+    form.append("size", size);
+    form.append("orientation", orientation);
+    return api.post<PdfPage>("/admin/pdf-pages", form, multipart).then((r) => r.data);
+  },
+  updatePdfPage: (id: number, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit">>) =>
+    api.patch<PdfPage>(`/admin/pdf-pages/${id}`, data).then((r) => r.data),
+  deletePdfPage: (id: number) => api.delete(`/admin/pdf-pages/${id}`),
+  reorderPdfPages: (ids: number[]) => api.put("/admin/pdf-pages/order", ids),
 };
 
 /** URL of an uploaded picture ("uploads/…" as the API stores it). */

@@ -26,6 +26,7 @@ export const editorPaths = {
   service: (id: number) => `/moh/editor/service/${id}`,
   labels: "/moh/editor/labels",
   staff: "/moh/editor/staff",
+  pdf: "/moh/editor/pdf",
 };
 
 /** The services editor: the site header, the category/service tree, and the open page. */
@@ -97,6 +98,11 @@ export function EditorLayout() {
             <NavLink to={editorPaths.labels} className={navClass}>
               {isArabic ? "العناوين والألوان" : "Labels & colours"}
             </NavLink>
+            {isAdmin && (
+              <NavLink to={editorPaths.pdf} className={navClass}>
+                {isArabic ? "صفحات PDF" : "PDF pages"}
+              </NavLink>
+            )}
             {isAdmin && (
               <NavLink to={editorPaths.staff} className={navClass}>
                 {isArabic ? "الموظفون" : "Staff"}

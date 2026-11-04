@@ -9,6 +9,7 @@
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
     "db:export-seed": "tsx prisma/export-seed.ts",
+    "db:export-pdf-pages": "tsx prisma/export-pdf-pages.ts",
     "db:seed:labels": "tsx prisma/seed-labels.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
