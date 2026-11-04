@@ -15,7 +15,7 @@ import {
     type TreeDivision,
 } from "@/lib/guide-api";
 import { columnHTML, paginate, type FlowEntry } from "@/lib/guide-flow";
-type Diagram = { title: string; svg: string };
+type Diagram = { title: string; svg: string; viewBox: string; parts: string[] };
 type Loaded = {
     division: TreeDivision;
     services: { detail: ServiceDetail; diagrams: Diagram[] }[];
@@ -28,6 +28,38 @@ const COL_WIDTH = (SHEET - 2 - PAD * 2 - GAP) / 2;
 const COL_HEIGHT = 880;
 const PRINT_PAGE_SIZE = "420mm 297mm";
 const PRINT_TITLE = "Ministry Services Guide";
+
+// Room for a drawing on an A3 landscape page (page minus padding and the title line), in CSS px
+const DIAGRAM_AREA = { w: 1527, h: 1017 };
+/** Below this a whole diagram is unreadable on one page, so it is cut into several pages */
+const SPLIT_BELOW = 0.3;
+const SPLIT_TARGET = 0.45;
+const MAX_PARTS = 8;
+
+const fitScale = (w: number, h: number) => Math.min(DIAGRAM_AREA.w / w, DIAGRAM_AREA.h / h);
+
+/**
+ * The viewBox of each page one diagram takes. Every page is A3 landscape like the rest of the guide; a very long
+ * diagram is cut into a few overlapping slices along its long side, in reading order (an Arabic sheet starts at its right edge).
+ */
+function planDiagram(w: number, h: number, rtl: boolean): string[] {
+    if (fitScale(w, h) >= SPLIT_BELOW) return [`0 0 ${w} ${h}`];
+
+    const wide = w >= h;
+    const length = wide ? w : h;
+    let count = 2;
+    while (count < MAX_PARTS && fitScale(wide ? length / count : w, wide ? h : length / count) < SPLIT_TARGET) count++;
+
+    const step = length / count;
+    const overlap = step * 0.04;
+    const parts = Array.from({ length: count }, (_, i) => {
+        const from = Math.max(0, i * step - overlap);
+        const size = Math.min(length, (i + 1) * step + overlap) - from;
+        return wide ? { x: from, y: 0, w: size, h } : { x: 0, y: from, w, h: size };
+    });
+    if (wide && rtl) parts.reverse();
+    return parts.map((p) => `${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.w)} ${Math.round(p.h)}`);
+}
 
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -64,7 +96,8 @@ async function loadService(id: number) {
                     <Drawing doc={doc} color={diagramColor(detail)} />
                 </svg>,
             );
-            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg };
+            const viewBox = `0 0 ${doc.width} ${doc.height}`;
+            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg, viewBox, parts: planDiagram(doc.width, doc.height, doc.rtl) };
         }),
     );
 
@@ -108,6 +141,9 @@ body { margin: 0; }
 .flow-page + .flow-page { break-before: page; }
 .flow-page > .slot { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 6px; }
 .sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; }
+.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; break-after: page; page: a3-landscape; width: 420mm; height: 297mm; }
+.diagram-page h4 { flex: none; margin: 0; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; }
+.diagram-page svg { display: block; flex: 1 1 0; min-height: 0; width: 100%; background: #fff; }
 .figure { width: ${SHEET}px; break-inside: avoid; margin: 0 0 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
 .figure h4 { margin: 0 0 8px; font-size: 16px; color: ${DEFAULT_LABEL_COLOR}; }
 .figure svg { display: block; width: 100%; height: auto; max-height: 800px; background: #fff; }
@@ -122,7 +158,14 @@ function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): 
         .map((pair) => `<div class="flow-page">${[0, 1].map((slot) => `<div class="slot">${pair[slot] ? columnHTML(pair[slot]) : ""}</div>`).join("")}</div>`)
         .join("");
     const flow = diagrams.length
-        ? `<h3 class="sub">مخطط سير الإجراء</h3>` + diagrams.map((d) => `<div class="figure"><h4>${esc(d.title)}</h4>${d.svg}</div>`).join("")
+        ? diagrams
+            .flatMap((d) =>
+                d.parts.map(
+                    (part, i) =>
+                        `<div class="diagram-page"><h4>${esc(d.title)}${d.parts.length > 1 ? ` (${i + 1}/${d.parts.length})` : ""}</h4>${d.svg.replace(`viewBox="${d.viewBox}"`, `viewBox="${part}"`)}</div>`,
+                ),
+            )
+            .join("")
         : "";
     const pictures = detail.images.length
         ? `<h3 class="sub">الصور</h3>` +
