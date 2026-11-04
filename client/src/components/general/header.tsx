@@ -1,4 +1,5 @@
-import { Landmark, Languages } from "lucide-react";
+import { useState } from "react";
+import { FileDown, Landmark, Languages } from "lucide-react";
 import { Link } from "react-router";
 import { AccessibilityControls } from "@/components/settings/accessibility-controls";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
@@ -14,6 +15,30 @@ export type HeaderLink = {
 
 export function Header({ links = [] }: { links?: HeaderLink[] }) {
   const { isArabic, toggleLanguage } = useLanguage();
+  const [pdf, setPdf] = useState({ busy: false, failed: false, done: 0, total: 0 });
+
+  async function downloadPdf() {
+    setPdf({ busy: true, failed: false, done: 0, total: 0 });
+    try {
+      const { exportGuidePdf } = await import("@/components/guide/export-pdf");
+      await exportGuidePdf((done, total) => setPdf({ busy: true, failed: false, done, total }));
+      setPdf((current) => ({ ...current, busy: false }));
+    } catch {
+      setPdf({ busy: false, failed: true, done: 0, total: 0 });
+    }
+  }
+
+  const pdfLabel = pdf.busy
+    ? isArabic
+      ? `جارٍ التحضير… ${pdf.done}/${pdf.total}`
+      : `Preparing… ${pdf.done}/${pdf.total}`
+    : pdf.failed
+      ? isArabic
+        ? "تعذر التصدير، حاول مجددًا"
+        : "Export failed, try again"
+      : isArabic
+        ? "تصدير الدليل PDF"
+        : "Export guide PDF";
 
   return (
     <>
@@ -72,6 +97,18 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
           <div className="ms-auto flex items-center gap-2">
             <ThemeSwitcher isArabic={isArabic} compact />
             <AccessibilityControls isArabic={isArabic} />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 whitespace-nowrap border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] bg-transparent text-[var(--secondary-accent-foreground)] hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)]"
+              onClick={downloadPdf}
+              disabled={pdf.busy}
+              aria-label={pdfLabel}
+            >
+              <FileDown aria-hidden="true" className="size-4" />
+              <span className="hidden sm:inline">{pdfLabel}</span>
+            </Button>
             <Button
               type="button"
               variant="outline"
