@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@db";
 import { hashPassword } from "@/utils/password.js";
+import { HIDDEN_DIVISIONS } from "@/utils/guide.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 
 // The admin API (see admin.routes.ts): the dashboard and the staff accounts. Admins only.
@@ -85,7 +86,11 @@ const staffJson = ({ serviceDivisions, ...user }: StaffRow) => ({
   divisions: serviceDivisions.map((d) => d.serviceDivision),
 });
 
-const staffOnly: Prisma.UserWhereInput = { roles: { some: { role: { name: "staff" } } } };
+// IT accounts are created in the database only: the admin neither sees nor manages them
+const staffOnly: Prisma.UserWhereInput = {
+  roles: { some: { role: { name: "staff" } } },
+  NOT: { serviceDivisions: { some: { serviceDivision: { name: { in: HIDDEN_DIVISIONS } } } } },
+};
 
 export async function listStaff(_request: Request, response: Response): Promise<void> {
   const staff = await prisma.user.findMany({ where: staffOnly, select: staffSelect, orderBy: { name: "asc" } });
@@ -99,7 +104,7 @@ async function divisionIdsOf(value: unknown): Promise<number[] | null> {
   if (!Array.isArray(value) || value.length === 0) return null;
   const ids = [...new Set(value.map(Number))];
   if (!ids.every((id) => Number.isInteger(id) && id > 0)) return null;
-  const found = await prisma.serviceDivision.count({ where: { id: { in: ids } } });
+  const found = await prisma.serviceDivision.count({ where: { id: { in: ids }, name: { notIn: HIDDEN_DIVISIONS } } });
   return found === ids.length ? ids : null;
 }
 
@@ -154,7 +159,7 @@ export async function updateStaff(request: Request, response: Response): Promise
   }
   if ("divisionId" in body) {
     const divisionId = Number(body["divisionId"]);
-    if (!Number.isInteger(divisionId) || !(await prisma.serviceDivision.findUnique({ where: { id: divisionId } }))) {
+    if (!Number.isInteger(divisionId) || !(await prisma.serviceDivision.findFirst({ where: { id: divisionId, name: { notIn: HIDDEN_DIVISIONS } } }))) {
       return bad(response, "The selected category does not exist.");
     }
     // A staff member has one category: replace the old one

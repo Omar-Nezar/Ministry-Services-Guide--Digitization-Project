@@ -1,6 +1,9 @@
 import { prisma } from "@db";
 
-export const byOrder = [{ order: "asc" as const }, { id: "asc" as const }];
+/** Categories that exist (data and staff editor) but are not shown in the public guide. */
+export const HIDDEN_DIVISIONS = ["IT"];
+
+export const byOrder =[{ order: "asc" as const }, { id: "asc" as const }];
 
 /** Plain text from html, for the short previews on the cards. */
 export function excerpt(html: string | undefined, max = 160): string {

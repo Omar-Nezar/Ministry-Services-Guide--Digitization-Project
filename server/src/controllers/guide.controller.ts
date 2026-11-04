@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import { prisma } from "@db";
-import { byOrder, excerpt, serviceLabels } from "@/utils/guide.js";
+import { byOrder, excerpt, HIDDEN_DIVISIONS, serviceLabels } from "@/utils/guide.js";
 
 // What the public guide shows. Nothing here changes data.
 const serviceOrder = [{ order: "asc" as const }, { sourceFile: "asc" as const }, { id: "asc" as const }];
@@ -10,7 +10,7 @@ const idParam = (request: Request): number => Number(request.params["id"]);
 /** Categories with their services' names: the cards and the sidebar. */
 export async function getTree(_request: Request, response: Response): Promise<void> {
   const divisions = await prisma.serviceDivision.findMany({
-    where: { services: { some: {} } },
+    where: { services: { some: {} }, name: { notIn: HIDDEN_DIVISIONS } },
     orderBy: byOrder,
     select: {
       id: true,
@@ -42,7 +42,7 @@ export async function getDivision(request: Request, response: Response): Promise
       },
     },
   });
-  if (!division) {
+  if (!division || HIDDEN_DIVISIONS.includes(division.name)) {
     response.status(404).json({ error: "Category not found." });
     return;
   }
@@ -69,7 +69,7 @@ export async function getService(request: Request, response: Response): Promise<
       images: { orderBy: byOrder, select: { id: true, imagePath: true, imageFit: true, caption: true } },
     },
   });
-  if (!service) {
+  if (!service || HIDDEN_DIVISIONS.includes(service.serviceDivision.name)) {
     response.status(404).json({ error: "Service not found." });
     return;
   }

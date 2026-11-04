@@ -4,7 +4,7 @@ import type { Request, Response } from "express";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@db";
 import type { AuthenticatedUser } from "@/middlewares/auth.middleware.js";
-import { byOrder, serviceLabels } from "@/utils/guide.js";
+import { byOrder, HIDDEN_DIVISIONS, serviceLabels } from "@/utils/guide.js";
 import { canEditDivision, isAdmin } from "@/utils/permissions.js";
 import { logServiceChange } from "@/utils/audit.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
@@ -56,6 +56,7 @@ function removeUpload(imagePath: string | null | undefined): void {
 export async function getTree(request: Request, response: Response): Promise<void> {
   const user = userOf(request);
   const divisions = await prisma.serviceDivision.findMany({
+    where: { name: { notIn: HIDDEN_DIVISIONS } },
     orderBy: byOrder,
     select: {
       id: true,
@@ -65,7 +66,7 @@ export async function getTree(request: Request, response: Response): Promise<voi
       services: { orderBy: serviceOrder, select: { id: true, name: true } },
     },
   });
-  // Staff see only the categories they may edit; admins see all
+  // Staff see only the categories they may edit; admins see all (hidden categories, like IT, are not part of the admin)
   response.json(
     divisions
       .map((d) => ({ ...d, editable: canEditDivision(user, d.name) }))
