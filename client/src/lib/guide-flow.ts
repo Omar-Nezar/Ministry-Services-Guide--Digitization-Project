@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import { textOn } from "@/components/flowchart/diagram";
 
 export type FlowEntry = { key: string; name: string; color: string; html: string };
 /** A label row inside one column. `cont` = the label's text continues from the previous column. */
@@ -6,7 +7,7 @@ export type Seg = { label: string; color: string; cont: boolean; units: string[]
 export type FlowColumn = Seg[];
 
 const ROW = "flex overflow-hidden rounded-md border";
-const LABEL_CELL = "shrink-0 p-3 text-sm font-bold text-white";
+const LABEL_CELL = "shrink-0 p-3 text-sm font-bold";
 const INFO_CELL = "min-w-0 flex-1 bg-muted/40 p-3";
 const LABEL_WIDTH = "max(28%, 6rem)";
 
@@ -22,7 +23,7 @@ const CONTINUED = "تابع / ";
 
 export function segHTML(seg: Seg) {
   const name = (seg.cont ? CONTINUED : "") + seg.label;
-  return `<div class="${ROW}"><div class="${LABEL_CELL}" style="width:${LABEL_WIDTH};background:${seg.color}">${esc(name)}</div><div class="${INFO_CELL}"><div class="rich-content">${seg.units.join("")}</div></div></div>`;
+  return `<div class="${ROW}"><div class="${LABEL_CELL}" style="width:${LABEL_WIDTH};background:${seg.color};color:${textOn(seg.color)}">${esc(name)}</div><div class="${INFO_CELL}"><div class="rich-content">${seg.units.join("")}</div></div></div>`;
 }
 
 export const columnHTML = (col: FlowColumn) => col.map(segHTML).join("");

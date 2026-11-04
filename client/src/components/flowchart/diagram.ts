@@ -775,7 +775,7 @@ function shades(base: string) {
   const t = Math.min(s, 0.6);
   return {
     header: base,
-    headerText: l > 0.6 ? "#1f2937" : "#ffffff",
+    headerText: lum(base) > 0.179 ? "#111827" : "#ffffff",
     ink: fromHsl(h, s, Math.min(l, 0.3)),
     body: fromHsl(h, t, 0.96),
     step: fromHsl(h, t, 0.88),
@@ -791,7 +791,14 @@ const LINE_COLOR = "#374151";
 const eq = (a: number, b: number, t = 2) => Math.abs(a - b) <= t;
 const isGray = (c?: string) => c?.toLowerCase() === "#d9d9d9";
 const oneOf = (c: string, list: string[]) => list.includes(c.toLowerCase());
-const white = (t: CopyText): CopyText => ({ ...t, paras: t.paras.map((p) => ({ ...p, color: "#ffffff" })) });
+const lum = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  const ch = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * ch(n >> 16) + 0.7152 * ch((n >> 8) & 255) + 0.0722 * ch(n & 255);
+};
+/** White or near-black, whichever contrasts more with `fill`. */
+export const textOn = (fill: string) => (HEX.test(fill) ? (lum(fill) > 0.179 ? "#111827" : "#ffffff") : "#ffffff");
+const recolor = (t: CopyText, fill: string): CopyText => ({ ...t, paras: t.paras.map((p) => ({ ...p, color: textOn(fill) })) });
 
 /**
  * Recolours a diagram in shades of `base`.
@@ -851,8 +858,8 @@ export function themeDoc(doc: CopyDoc, base?: string | null): CopyDoc {
     const strong = sat > 0.2 && light < 0.75;
     const terminal = s.prst === "ellipse" || s.prst === "flowChartTerminator" || (s.prst === "flowChartConnector" && strong);
     const decision = s.prst === "diamond" || s.prst === "flowChartDecision" || (s.prst === "rect" && strong);
-    if (terminal) return { ...s, fill: k.terminal, stroke: k.terminalLine, text: s.text && white(s.text) };
-    if (decision) return { ...s, fill: k.decision, stroke: k.decisionLine, text: s.text && white(s.text) };
+    if (terminal) return { ...s, fill: k.terminal, stroke: k.terminalLine, text: s.text && recolor(s.text, k.terminal) };
+    if (decision) return { ...s, fill: k.decision, stroke: k.decisionLine, text: s.text && recolor(s.text, k.decision) };
     return { ...s, fill: k.step, stroke: k.stepLine };
   });
 

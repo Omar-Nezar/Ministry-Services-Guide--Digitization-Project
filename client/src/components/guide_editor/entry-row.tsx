@@ -1,4 +1,5 @@
 import { DEFAULT_LABEL_COLOR, editorApi, type GuideLabel } from "@/lib/guide-api";
+import { textOn } from "@/components/flowchart/diagram";
 import { RichEditor } from "./rich-editor";
 
 type Props = {
@@ -16,8 +17,8 @@ export function EntryRow({ serviceId, label, disabled, onDirty, onText }: Props)
   return (
     <div className="flex overflow-hidden rounded-md border bg-card" dir="rtl">
       <div
-        style={{ width: "max(28%, 6rem)", background: label.color ?? DEFAULT_LABEL_COLOR }}
-        className="flex shrink-0 flex-col justify-between gap-2 p-2 text-white"
+        style={{ width: "max(28%, 6rem)", background: label.color ?? DEFAULT_LABEL_COLOR, color: textOn(label.color ?? DEFAULT_LABEL_COLOR) }}
+        className="flex shrink-0 flex-col justify-between gap-2 p-2"
       >
         <span className="min-w-0 text-sm font-bold leading-6">{label.name}</span>
       </div>
