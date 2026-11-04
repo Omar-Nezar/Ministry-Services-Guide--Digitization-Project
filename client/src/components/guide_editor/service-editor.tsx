@@ -44,6 +44,9 @@ export function ServiceEditor() {
     setSaveState("idle");
   }, []);
 
+  // Adding, deleting and reordering are stored at once; this only makes the Save button show that the service changed.
+  const touch = () => markDirty("structure", async () => undefined);
+
   const forget = (key: string) => {
     pending.current.delete(key);
     setCount(pending.current.size);
@@ -143,17 +146,20 @@ export function ServiceEditor() {
   const addFlowchart = async () => {
     const created = await editorApi.createFlowchart(service.id, "", JSON.stringify(normalize(newDoc(""))));
     patch({ flowcharts: [...service.flowcharts, created] });
+    touch();
   };
   const deleteFlowchart = async (f: EditorFlowchart) => {
     if (!confirm(t("حذف هذا المخطط نهائياً؟", "Delete this flowchart for good?"))) return;
     await editorApi.deleteFlowchart(f.id);
     forget(`flowchart-${f.id}`);
     patch({ flowcharts: service.flowcharts.filter((x) => x.id !== f.id) });
+    touch();
   };
   const moveFlowchart = (index: number, dir: -1 | 1) => {
     const next = move(service.flowcharts, index, dir);
     if (!next) return;
     patch({ flowcharts: next });
+    touch();
     void editorApi.reorderFlowcharts(service.id, next.map((f) => f.id));
   };
 
@@ -162,6 +168,7 @@ export function ServiceEditor() {
     if (!file) return;
     try {
       patch({ images: [...service.images, await editorApi.uploadImage(service.id, file)] });
+      touch();
     } catch (e) {
       alert(apiErrorMessage(e, t("تعذر رفع الصورة.", "Unable to upload the picture.")));
     }
@@ -171,11 +178,13 @@ export function ServiceEditor() {
     await editorApi.deleteImage(image.id);
     forget(`image-${image.id}`);
     patch({ images: service.images.filter((x) => x.id !== image.id) });
+    touch();
   };
   const moveImage = (index: number, dir: -1 | 1) => {
     const next = move(service.images, index, dir);
     if (!next) return;
     patch({ images: next });
+    touch();
     void editorApi.reorderImages(service.id, next.map((i) => i.id));
   };
 
