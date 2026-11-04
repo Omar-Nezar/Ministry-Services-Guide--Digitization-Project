@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useParams } from "react-router";
+import { textOn } from "@/components/flowchart/diagram";
 import { useLanguage } from "@/components/settings/language-context";
 import {
   DEFAULT_LABEL_COLOR,
@@ -55,7 +56,11 @@ export function GuideService() {
         <p className="text-sm font-medium text-muted-foreground">{divisionTitle(division, isArabic)}</p>
         <h1
           className="mt-2 text-2xl leading-relaxed font-bold tracking-tight md:text-[1.7rem]"
-          style={{ color: division.color ?? DEFAULT_LABEL_COLOR }}
+          style={{
+            color: division.color ?? DEFAULT_LABEL_COLOR,
+            WebkitTextStroke: `1.5px ${textOn(division.color ?? DEFAULT_LABEL_COLOR)}`,
+            paintOrder: "stroke fill",
+          }}
         >
           {serviceTitle(data.name)}
         </h1>

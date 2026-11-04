@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useOutletContext, useParams } from "react-router";
 import { ArrowDown, ArrowUp, Check, FileDown, ImagePlus, Loader2, Trash2, Workflow } from "lucide-react";
-import { newDoc, normalize } from "@/components/flowchart/diagram";
+import { newDoc, normalize, textOn } from "@/components/flowchart/diagram";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -247,7 +247,10 @@ export function ServiceEditor() {
           placeholder={t("اسم الخدمة", "Service name")}
           aria-label={t("اسم الخدمة", "Service name")}
           className="min-h-0 resize-none rounded-none border-0 border-b bg-transparent px-1 py-2 text-2xl leading-relaxed font-bold shadow-none focus-visible:ring-0 md:text-2xl dark:bg-transparent"
-          style={{ color: service.serviceDivision.color ?? undefined }}
+          style={{
+            color: service.serviceDivision.color ?? undefined,
+            ...(service.serviceDivision.color ? { WebkitTextStroke: `1.5px ${textOn(service.serviceDivision.color)}`, paintOrder: "stroke fill" } : {}),
+          }}
         />
         <div className="flex flex-col gap-1.5">
           {service.labels.map((label) => (
