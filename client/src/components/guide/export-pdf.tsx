@@ -1,7 +1,8 @@
 // Builds the complete guide in a hidden frame and opens the browser print dialog.
 import { renderToStaticMarkup } from "react-dom/server";
 import { Drawing } from "@/components/flowchart/copy-canvas";
-import { isCopyDoc } from "@/components/flowchart/types";
+import { textOn, themeDoc } from "@/components/flowchart/diagram";
+import { isCopyDoc, type CopyDoc } from "@/components/flowchart/types";
 import {
     DEFAULT_LABEL_COLOR,
     diagramColor,
@@ -38,12 +39,51 @@ const MAX_PARTS = 8;
 
 const fitScale = (w: number, h: number) => Math.min(DIAGRAM_AREA.w / w, DIAGRAM_AREA.h / h);
 
+type Box = { x: number; y: number; w: number; h: number };
+const blankFill = (fill?: string) => !fill || fill === "none" || /^#f{3}(f{3})?$/i.test(fill);
+
+/**
+ * The part of the sheet the diagram really occupies. An Excel sheet can be far bigger than its drawing (a stray,
+ * unconnected line left in a corner is enough), which would make the diagram tiny and off to one side on its page.
+ * Cells and shapes decide the box; a line only counts if it is connected to a shape or ends inside that box.
+ */
+function drawingBox(raw: CopyDoc, color: string | null): Box {
+    const doc = themeDoc(raw, color);
+    const whole: Box = { x: 0, y: 0, w: doc.width, h: doc.height };
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const grow = (x: number, y: number, w = 0, h = 0) => {
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x + w); y1 = Math.max(y1, y + h);
+    };
+    for (const c of [...(doc.bg ?? []), ...doc.cells]) {
+        if (!blankFill(c.fill) || c.text?.trim() || c.border) grow(c.x, c.y, c.w, c.h);
+    }
+    for (const sh of doc.shapes) {
+        // a turned shape can reach as far as its diagonal from its centre
+        const reach = sh.rot % 180 === 0 ? 0 : Math.abs(sh.w - sh.h) / 2;
+        grow(sh.x - reach, sh.y - reach, sh.w + reach * 2, sh.h + reach * 2);
+    }
+    if (!Number.isFinite(x0)) return whole;
+
+    const slack = 60;
+    const near = ([px, py]: [number, number]) => px >= x0 - slack && px <= x1 + slack && py >= y0 - slack && py <= y1 + slack;
+    for (const l of doc.lines) {
+        if (l.from || l.to || l.points.every(near)) for (const [px, py] of l.points) grow(px, py);
+    }
+
+    const pad = 16;
+    const x = Math.max(0, x0 - pad);
+    const y = Math.max(0, y0 - pad);
+    const w = Math.min(doc.width, x1 + pad) - x;
+    const h = Math.min(doc.height, y1 + pad) - y;
+    return w > 40 && h > 40 ? { x, y, w, h } : whole;
+}
+
 /**
  * The viewBox of each page one diagram takes. Every page is A3 landscape like the rest of the guide; a very long
  * diagram is cut into a few overlapping slices along its long side, in reading order (an Arabic sheet starts at its right edge).
  */
-function planDiagram(w: number, h: number, rtl: boolean): string[] {
-    if (fitScale(w, h) >= SPLIT_BELOW) return [`0 0 ${w} ${h}`];
+function planDiagram({ x: x0, y: y0, w, h }: Box, rtl: boolean): string[] {
+    if (fitScale(w, h) >= SPLIT_BELOW) return [`${x0} ${y0} ${w} ${h}`];
 
     const wide = w >= h;
     const length = wide ? w : h;
@@ -55,7 +95,7 @@ function planDiagram(w: number, h: number, rtl: boolean): string[] {
     const parts = Array.from({ length: count }, (_, i) => {
         const from = Math.max(0, i * step - overlap);
         const size = Math.min(length, (i + 1) * step + overlap) - from;
-        return wide ? { x: from, y: 0, w: size, h } : { x: 0, y: from, w, h: size };
+        return wide ? { x: x0 + from, y: y0, w: size, h } : { x: x0, y: y0 + from, w, h: size };
     });
     if (wide && rtl) parts.reverse();
     return parts.map((p) => `${Math.round(p.x)} ${Math.round(p.y)} ${Math.round(p.w)} ${Math.round(p.h)}`);
@@ -91,13 +131,15 @@ async function loadService(id: number) {
                 console.warn(`[PDF Export] Flowchart ID ${f.id} is empty or invalid doc format.`);
                 return null;
             }
+            const color = diagramColor(detail);
+            const box = drawingBox(doc, color);
+            const viewBox = `${box.x} ${box.y} ${box.w} ${box.h}`;
             const svg = renderToStaticMarkup(
-                <svg viewBox={`0 0 ${doc.width} ${doc.height}`} role="img">
-                    <Drawing doc={doc} color={diagramColor(detail)} />
+                <svg viewBox={viewBox} role="img">
+                    <Drawing doc={doc} color={color} />
                 </svg>,
             );
-            const viewBox = `0 0 ${doc.width} ${doc.height}`;
-            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg, viewBox, parts: planDiagram(doc.width, doc.height, doc.rtl) };
+            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg, viewBox, parts: planDiagram(box, doc.rtl) };
         }),
     );
 
@@ -220,7 +262,7 @@ function documentHtml(
             return (
                 customAt("before", division.id) +
                 `<div class="division" id="d${division.id}">` +
-                `<h1 style="background:${esc(division.color ?? DEFAULT_LABEL_COLOR)}">${esc(divisionTitle(division, true))}</h1>` +
+                `<h1 style="background:${esc(division.color ?? DEFAULT_LABEL_COLOR)};color:${textOn(division.color ?? DEFAULT_LABEL_COLOR)}">${esc(divisionTitle(division, true))}</h1>` +
                 services.map(serviceHtml).join("") +
                 `</div>` +
                 customAt("after", division.id)
