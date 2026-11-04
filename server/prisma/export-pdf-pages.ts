@@ -36,6 +36,7 @@ async function main() {
       size: p.size,
       orientation: p.orientation,
       fit: p.imageFit,
+      rotation: p.rotation,
       order: p.order,
       file,
     });

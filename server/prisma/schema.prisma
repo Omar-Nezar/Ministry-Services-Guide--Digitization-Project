@@ -216,6 +216,8 @@ model PdfPage {
   orientation       String           @default("portrait") @db.VarChar(10)
   /// contain | cover
   imageFit          String           @default("contain") @db.VarChar(20)
+  /// Clockwise turn of the picture inside its page: 0 | 90 | 180 | 270
+  rotation          Int              @default(0)
   imagePath         String           @db.NVarChar(400)
   order             Int              @default(0)
   createdAt         DateTime         @default(now())

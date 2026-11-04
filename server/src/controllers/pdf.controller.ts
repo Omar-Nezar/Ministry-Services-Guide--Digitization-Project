@@ -53,7 +53,7 @@ export async function createPdfPage(request: Request, response: Response): Promi
 export async function updatePdfPage(request: Request, response: Response): Promise<void> {
   const id = Number(request.params["id"]);
   const body = bodyOf(request);
-  const data: { size?: string; orientation?: string; imageFit?: string } = {};
+  const data: { size?: string; orientation?: string; imageFit?: string; rotation?: number } = {};
   if ("size" in body) {
     if (body["size"] !== "A3" && body["size"] !== "A4") return bad(response, "Size must be A3 or A4.");
     data.size = body["size"];
@@ -61,6 +61,10 @@ export async function updatePdfPage(request: Request, response: Response): Promi
   if ("orientation" in body) {
     if (body["orientation"] !== "portrait" && body["orientation"] !== "landscape") return bad(response, "Orientation must be portrait or landscape.");
     data.orientation = body["orientation"];
+  }
+  if ("rotation" in body) {
+    if (![0, 90, 180, 270].includes(body["rotation"] as number)) return bad(response, "Rotation must be 0, 90, 180 or 270.");
+    data.rotation = body["rotation"] as number;
   }
   if ("imageFit" in body) {
     if (body["imageFit"] !== "contain" && body["imageFit"] !== "cover") return bad(response, "Fit must be contain or cover.");

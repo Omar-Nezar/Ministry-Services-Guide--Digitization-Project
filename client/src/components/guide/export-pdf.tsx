@@ -94,8 +94,9 @@ body { margin: 0; }
 .division { break-before: page; }
 .division > h1 { margin: 0 0 20px; padding: 10px 20px; color: #fff; font-size: 30px; border-radius: 8px; }
 
-.custom-page { break-before: page; break-after: page; overflow: hidden; background: #fff; }
+.custom-page { position: relative; break-before: page; break-after: page; overflow: hidden; background: #fff; }
 .custom-page img { display: block; width: 100%; height: 100%; }
+.custom-page img.turned { position: absolute; left: 50%; top: 50%; }
 .custom-page.a4-portrait { page: a4-portrait; width: 210mm; height: 297mm; }
 .custom-page.a4-landscape { page: a4-landscape; width: 297mm; height: 210mm; }
 .custom-page.a3-portrait { page: a3-portrait; width: 297mm; height: 420mm; }
@@ -138,10 +139,20 @@ function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): 
 /** The pictures an admin added, as full pages of their own size (A4 or A3). */
 function customPagesHtml(pages: PdfPage[]): string {
     return pages
-        .map(
-            (p) =>
-                `<div class="custom-page ${p.size.toLowerCase()}-${p.orientation}"><img src="${esc(uploadUrl(p.imagePath))}" alt="" style="object-fit:${p.imageFit}"></div>`,
-        )
+        .map((p) => {
+            // A quarter turn swaps the picture's box (page height x page width) so it still fills the page once turned
+            const [w, h] = (p.size === "A3" ? [297, 420] : [210, 297]).sort((a, b) => (p.orientation === "landscape" ? b - a : a - b));
+            const quarter = p.rotation === 90 || p.rotation === 270;
+            const style =
+                `object-fit:${p.imageFit}` +
+                (p.rotation === 0
+                    ? ""
+                    : quarter
+                      ? `;width:${h}mm;height:${w}mm;transform:translate(-50%,-50%) rotate(${p.rotation}deg)`
+                      : `;transform:rotate(180deg)`);
+            const turned = quarter ? ' class="turned"' : "";
+            return `<div class="custom-page ${p.size.toLowerCase()}-${p.orientation}"><img${turned} src="${esc(uploadUrl(p.imagePath))}" alt="" style="${style}"></div>`;
+        })
         .join("");
 }
 

@@ -150,7 +150,7 @@ async function seedPdfPages(file = path.join(process.cwd(), "prisma", "seed", "p
     return;
   }
   const { pages } = JSON.parse(text) as {
-    pages: { slot: string; division: string | null; size: string; orientation: string; fit: string; order: number; file: string }[];
+    pages: { slot: string; division: string | null; size: string; orientation: string; fit: string; rotation?: number; order: number; file: string }[];
   };
   await mkdir(UPLOAD_DIR, { recursive: true });
   let created = 0;
@@ -173,6 +173,7 @@ async function seedPdfPages(file = path.join(process.cwd(), "prisma", "seed", "p
         size: p.size,
         orientation: p.orientation,
         imageFit: p.fit,
+        rotation: p.rotation ?? 0,
         order: p.order,
         imagePath: `uploads/${p.file}`,
       },

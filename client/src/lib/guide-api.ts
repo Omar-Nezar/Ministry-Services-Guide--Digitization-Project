@@ -88,6 +88,8 @@ export interface PdfPage {
   size: "A3" | "A4";
   orientation: "portrait" | "landscape";
   imageFit: "contain" | "cover";
+  /** Clockwise turn of the picture inside its page */
+  rotation: 0 | 90 | 180 | 270;
   imagePath: string;
   order: number;
 }
@@ -197,7 +199,7 @@ export const adminApi = {
     form.append("orientation", orientation);
     return api.post<PdfPage>("/admin/pdf-pages", form, multipart).then((r) => r.data);
   },
-  updatePdfPage: (id: number, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit">>) =>
+  updatePdfPage: (id: number, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit" | "rotation">>) =>
     api.patch<PdfPage>(`/admin/pdf-pages/${id}`, data).then((r) => r.data),
   deletePdfPage: (id: number) => api.delete(`/admin/pdf-pages/${id}`),
   reorderPdfPages: (ids: number[]) => api.put("/admin/pdf-pages/order", ids),

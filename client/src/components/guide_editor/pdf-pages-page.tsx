@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useOutletContext } from "react-router";
-import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, RotateCcw, RotateCw, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,8 +17,6 @@ export function PdfPagesPage() {
   const { isArabic } = useLanguage();
   const t = (ar: string, en: string) => (isArabic ? ar : en);
   const [pages, setPages] = useState<PdfPage[]>([]);
-  const [size, setSize] = useState<PdfPage["size"]>("A4");
-  const [orientation, setOrientation] = useState<PdfPage["orientation"]>("portrait");
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState("");
 
@@ -45,7 +43,9 @@ export function PdfPagesPage() {
             setPages((ps) => [...ps, created]);
           }
         } else {
-          const created = await adminApi.addPdfPage(file, w, size, orientation);
+          // A picture starts as A4 in the direction it is drawn; the page's row changes the size afterwards
+          const { width, height } = await createImageBitmap(file);
+          const created = await adminApi.addPdfPage(file, w, "A4", width > height ? "landscape" : "portrait");
           setPages((ps) => [...ps, created]);
         }
       }
@@ -57,7 +57,7 @@ export function PdfPagesPage() {
     }
   };
 
-  const change = async (page: PdfPage, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit">>) => {
+  const change = async (page: PdfPage, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit" | "rotation">>) => {
     setPages((ps) => ps.map((p) => (p.id === page.id ? { ...p, ...data } : p)));
     try {
       await adminApi.updatePdfPage(page.id, data);
@@ -111,7 +111,17 @@ export function PdfPagesPage() {
         <ul className="flex flex-col gap-2">
           {list.map((p, i) => (
             <li key={p.id} className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-2">
-              <img src={uploadUrl(p.imagePath)} alt="" className="h-20 w-16 shrink-0 rounded border bg-muted object-contain" />
+              <span className="flex h-20 w-16 shrink-0 items-center justify-center overflow-hidden rounded border bg-muted">
+                <img
+                  src={uploadUrl(p.imagePath)}
+                  alt=""
+                  className="object-contain"
+                  style={{
+                    transform: `rotate(${p.rotation}deg)`,
+                    ...(p.rotation % 180 === 0 ? { width: "100%", height: "100%" } : { width: "5rem", height: "4rem", maxWidth: "none", flex: "none" }),
+                  }}
+                />
+              </span>
               <select className={selectClass} value={p.size} aria-label={t("الحجم", "Size")} onChange={(e) => void change(p, { size: e.target.value as PdfPage["size"] })}>
                 <option value="A4">A4</option>
                 <option value="A3">A3</option>
@@ -125,6 +135,12 @@ export function PdfPagesPage() {
                 <option value="cover">{t("تغطية", "Cover")}</option>
               </select>
               <div className="ms-auto flex gap-1">
+                <Button type="button" variant="ghost" size="icon" aria-label={t("تدوير لليسار", "Rotate left")} onClick={() => void change(p, { rotation: ((p.rotation + 270) % 360) as PdfPage["rotation"] })}>
+                  <RotateCcw />
+                </Button>
+                <Button type="button" variant="ghost" size="icon" aria-label={t("تدوير لليمين", "Rotate right")} onClick={() => void change(p, { rotation: ((p.rotation + 90) % 360) as PdfPage["rotation"] })}>
+                  <RotateCw />
+                </Button>
                 <Button type="button" variant="ghost" size="icon" aria-label={t("أعلى", "Move up")} disabled={i === 0} onClick={() => move(w, i, -1)}>
                   <ArrowUp />
                 </Button>
@@ -149,27 +165,10 @@ export function PdfPagesPage() {
           <CardTitle className="text-xl">{t("صفحات ملف PDF", "PDF pages")}</CardTitle>
           <CardDescription>
             {t(
-              "أضف صفحات كاملة (صور أو ملفات PDF) إلى الدليل المصدَّر بحجم A4 أو A3. تُقسَّم ملفات PDF إلى صفحات بحجمها الأصلي. تتبع المجالات ترتيبها في الدليل. عند الحفظ كملف PDF من نافذة الطباعة تحافظ كل صفحة على حجمها.",
-              "Add full-page pictures or PDFs to the exported guide, as A4 or A3. A PDF is split into pages, each keeping its own size. Categories follow the order of the guide. Save as PDF from the print dialog keeps each page at its own size.",
+              "أضف صور أو ملفات PDF في المكان المطلوب من الدليل. تُقسَّم ملفات PDF إلى صفحات بحجمها الأصلي، وتبدأ الصورة بحجم A4 ويمكن تغيير الحجم والاتجاه لكل صفحة. عند الحفظ كملف PDF من نافذة الطباعة تحافظ كل صفحة على حجمها.",
+              "Add pictures or PDFs where you want them in the guide. A PDF is split into pages, each keeping its own size. A picture starts as A4; change the size and direction of any page in its row. Save as PDF from the print dialog keeps each page at its own size.",
             )}
           </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3 text-sm">
-          {t("حجم الصورة الجديدة:", "New picture:")}
-          <select className={selectClass} value={size} aria-label={t("الحجم", "Size")} onChange={(e) => setSize(e.target.value as PdfPage["size"])}>
-            <option value="A4">A4</option>
-            <option value="A3">A3</option>
-          </select>
-          <select className={selectClass} value={orientation} aria-label={t("الاتجاه", "Orientation")} onChange={(e) => setOrientation(e.target.value as PdfPage["orientation"])}>
-            <option value="portrait">{t("طولي", "Portrait")}</option>
-            <option value="landscape">{t("عرضي", "Landscape")}</option>
-          </select>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">{t("صفحات إضافية", "Extra pages")}</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           {slot({ slot: "start" }, t("بداية الدليل (قبل الغلاف)", "Start of the guide (before the cover)"))}
