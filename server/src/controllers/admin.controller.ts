@@ -38,6 +38,31 @@ export async function getDashboard(_request: Request, response: Response): Promi
   });
 }
 
+const MAX_LOG_ROWS = 500;
+
+/** The change log: newest first. ?limit=5|10|all (default 5) and ?division=<category name> to filter. */
+export async function listUpdates(request: Request, response: Response): Promise<void> {
+  const { limit, division } = request.query;
+  const take = limit === "all" ? MAX_LOG_ROWS : Math.min(Math.max(Number(limit) || 5, 1), MAX_LOG_ROWS);
+  const rows = await prisma.serviceAudit.findMany({
+    where: typeof division === "string" && division ? { divisionName: division } : {},
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take,
+  });
+  response.json(
+    rows.map((r) => ({
+      id: Number(r.id),
+      action: r.action,
+      serviceId: r.serviceId,
+      serviceName: r.serviceName,
+      divisionName: r.divisionName,
+      userName: r.userName,
+      detail: r.detail,
+      createdAt: r.createdAt,
+    })),
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Staff accounts (users with the "staff" role): added here with a temporary password,
 // which the person replaces the first time they sign in.

@@ -10,6 +10,7 @@ const adminRouter = Router();
 adminRouter.use(authenticateSession, requireRole("admin"));
 
 adminRouter.get("/dashboard", admin.getDashboard);
+adminRouter.get("/updates", admin.listUpdates);
 
 adminRouter.get("/staff", admin.listStaff);
 adminRouter.post("/staff", admin.createStaff);

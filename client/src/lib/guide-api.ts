@@ -97,6 +97,8 @@ export interface PdfPage {
 // ---- the admin dashboard and staff accounts (/admin/..., admins only) ----
 
 export interface LatestUpdate {
+  /** Only on rows from the log (not on the dashboard's latest update) */
+  id?: number;
   /** service.rename, section.save, image.delete, ... */
   action: string;
   serviceId: number | null;
@@ -184,6 +186,8 @@ export const editorApi = {
 
 export const adminApi = {
   dashboard: () => get<Dashboard>("/admin/dashboard"),
+  updates: (limit: number | "all", division?: string) =>
+    api.get<LatestUpdate[]>("/admin/updates", { params: { limit, ...(division ? { division } : {}) } }).then((r) => r.data),
   staff: () => get<StaffMember[]>("/admin/staff"),
   createStaff: (data: { name: string; email: string; divisionIds: number[] }) =>
     api.post<StaffMember & { temporaryPassword: string }>("/admin/staff", data).then((r) => r.data),

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router";
 import { useLanguage } from "@/components/settings/language-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminApi, serviceTitle, type Dashboard, type LatestUpdate } from "@/lib/guide-api";
+import { adminApi, guideApi, serviceTitle, type Dashboard, type LatestUpdate } from "@/lib/guide-api";
 import { editorPaths, type EditorContext } from "./editor-layout";
 
 /** Shown at /moh/editor: the dashboard for admins, a hint for staff before a service is chosen. */
@@ -60,7 +60,75 @@ function AdminDashboard() {
           <CardContent>{data ? <LatestUpdateView update={data.latestUpdate} /> : <span className="text-muted-foreground">…</span>}</CardContent>
         </Card>
       </div>
+      <UpdateLog />
     </div>
+  );
+}
+
+function UpdateLog() {
+  const { isArabic } = useLanguage();
+  const t = (ar: string, en: string) => (isArabic ? ar : en);
+  const [limit, setLimit] = useState<"5" | "10" | "all">("5");
+  const [division, setDivision] = useState("");
+  const [divisions, setDivisions] = useState<string[]>([]);
+  const [rows, setRows] = useState<LatestUpdate[] | undefined>();
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    guideApi.tree().then((tree) => setDivisions(tree.map((d) => d.name)), () => undefined);
+  }, []);
+
+  useEffect(() => {
+    let current = true;
+    setFailed(false);
+    adminApi.updates(limit === "all" ? "all" : Number(limit), division || undefined).then(
+      (data) => current && setRows(data),
+      () => current && setFailed(true),
+    );
+    return () => {
+      current = false;
+    };
+  }, [limit, division]);
+
+  const selectClass = "h-9 rounded-md border bg-background px-2 text-sm";
+  return (
+    <Card>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
+        <CardDescription>{t("سجل التحديثات", "Update log")}</CardDescription>
+        <div className="flex flex-wrap gap-2">
+          <select className={selectClass} value={division} onChange={(e) => setDivision(e.target.value)} aria-label={t("التصنيف", "Category")}>
+            <option value="">{t("كل التصنيفات", "All categories")}</option>
+            {divisions.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
+          <select className={selectClass} value={limit} onChange={(e) => setLimit(e.target.value as typeof limit)} aria-label={t("العدد", "Amount")}>
+            <option value="5">{t("آخر 5", "Last 5")}</option>
+            <option value="10">{t("آخر 10", "Last 10")}</option>
+            <option value="all">{t("الكل", "All")}</option>
+          </select>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {failed ? (
+          <p className="text-sm text-destructive">{t("تعذر تحميل السجل.", "Unable to load the log.")}</p>
+        ) : !rows ? (
+          <span className="text-muted-foreground">…</span>
+        ) : rows.length === 0 ? (
+          <p className="text-muted-foreground">{t("لا توجد تحديثات.", "No updates found.")}</p>
+        ) : (
+          <ul className="divide-y">
+            {rows.map((row) => (
+              <li key={row.id} className="py-3 first:pt-0 last:pb-0">
+                <LatestUpdateView update={row} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
