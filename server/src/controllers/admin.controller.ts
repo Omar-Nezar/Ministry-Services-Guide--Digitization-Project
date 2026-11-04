@@ -48,6 +48,7 @@ const staffSelect = {
   name: true,
   email: true,
   isActive: true,
+  mustChangePassword: true,
   createdAt: true,
   serviceDivisions: { select: { serviceDivision: { select: { id: true, name: true, nameAr: true } } } },
 } satisfies Prisma.UserSelect;

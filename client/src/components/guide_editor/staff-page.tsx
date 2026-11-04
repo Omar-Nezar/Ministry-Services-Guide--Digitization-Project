@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate, useOutletContext } from "react-router";
-import { Check, Copy, Pencil, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
+import { Check, Copy, Pencil, Search, Trash2, UserCheck, UserPlus, UserX } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +44,10 @@ export function StaffPage() {
   const [copied, setCopied] = useState(false);
   /** The staff member whose categories are being edited, and the ticked ones */
   const [editing, setEditing] = useState<{ id: number; divisionIds: number[] } | undefined>();
+  /** What narrows the list: words in the name or email, one category ("" = all), active or disabled ("" = both) */
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | "active" | "disabled">("");
   useEffect(() => {
     if (isAdmin) adminApi.staff().then(setStaff, () => setStaff([]));
   }, [isAdmin]);
@@ -103,6 +107,14 @@ export function StaffPage() {
     }
   };
 
+  const query = search.trim().toLowerCase();
+  const visibleStaff = staff?.filter(
+    (m) =>
+      (!query || m.name.toLowerCase().includes(query) || m.email.toLowerCase().includes(query)) &&
+      (!categoryFilter || m.divisions.some((d) => String(d.id) === categoryFilter)) &&
+      (!statusFilter || m.isActive === (statusFilter === "active"))
+  );
+
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-6">
       <Card>
@@ -157,7 +169,34 @@ export function StaffPage() {
           )}
           {staff === undefined && <div className="h-24 animate-pulse rounded-lg bg-muted" />}
           {staff?.length === 0 && <p className="text-muted-foreground">{t("لا يوجد موظفون بعد.", "No staff yet.")}</p>}
-          {staff?.map((m) => (
+          {staff && staff.length > 0 && (
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <div className="relative">
+                <Search aria-hidden="true" className="pointer-events-none absolute start-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="search"
+                  className={`${inputClass} ps-8`}
+                  placeholder={t("ابحث بالاسم أو البريد الإلكتروني", "Search by name or email")}
+                  aria-label={t("بحث عن موظف", "Search staff")}
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <select className={inputClass} aria-label={t("تصفية حسب الشعبة", "Filter by category")} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+                <option value="">{t("كل الشعب", "All categories")}</option>
+                {tree?.map((d) => (
+                  <option key={d.id} value={d.id}>{divisionTitle(d, isArabic)}</option>
+                ))}
+              </select>
+              <select className={inputClass} aria-label={t("تصفية حسب الحالة", "Filter by status")} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}>
+                <option value="">{t("كل الحالات", "All statuses")}</option>
+                <option value="active">{t("نشط", "Active")}</option>
+                <option value="disabled">{t("معطل", "Inactive")}</option>
+              </select>
+            </div>
+          )}
+          {staff && staff.length > 0 && visibleStaff?.length === 0 && <p className="text-muted-foreground">{t("لا توجد نتائج مطابقة.", "No matching staff.")}</p>}
+          {visibleStaff?.map((m) => (
             <div key={m.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">
