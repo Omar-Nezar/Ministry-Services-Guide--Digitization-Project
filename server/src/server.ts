@@ -5,19 +5,21 @@ import type { NextFunction, Request, Response } from "express";
 import adminRouter from "./routes/admin.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import editorRouter from "./routes/editor.routes.js";
+import feedbackRouter from "./routes/feedback.routes.js";
 import guideRouter from "./routes/guide.routes.js";
 import { UPLOAD_DIR } from "./middlewares/upload.middleware.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 const isProduction = process.env.NODE_ENV === "production";
-const allowedOrigins = (
-  process.env.CLIENT_ORIGINS ??
-  (isProduction ? "" : "http://localhost:5173")
-)
+const configuredOrigins = (process.env.CLIENT_ORIGINS ?? "")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const developmentOrigins = isProduction
+  ? []
+  : ["http://localhost:5173", "http://127.0.0.1:5173"];
+const allowedOrigins = [...new Set([...configuredOrigins, ...developmentOrigins])];
 
 if (allowedOrigins.length === 0) {
   throw new Error("CLIENT_ORIGINS must contain at least one trusted frontend origin.");
@@ -71,6 +73,7 @@ app.use("/auth", authRouter);
 app.use("/admin", adminRouter);
 app.use("/guide", guideRouter);
 app.use("/editor", editorRouter);
+app.use("/feedback", feedbackRouter);
 
 app.use((error: unknown, _request: Request, response: Response, _next: NextFunction) => {
   console.error(error);

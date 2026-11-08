@@ -19,7 +19,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     document.documentElement.dir = isArabic ? "rtl" : "ltr";
     document.title = isArabic
       ? "دليل الخدمات الحكومية"
-      : "Ministry Services Guide";
+      : "Ministry Services Catalogue";
 
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, isArabic ? "ar" : "en");

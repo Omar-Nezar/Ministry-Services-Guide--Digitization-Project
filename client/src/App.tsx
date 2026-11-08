@@ -11,6 +11,8 @@ import { GuideDivision } from "@/components/guide/guide-division";
 import { GuideHome } from "@/components/guide/guide-home";
 import { GuideLayout } from "@/components/guide/guide-layout";
 import { GuideService } from "@/components/guide/guide-service";
+import { FeedbackSurvey } from "@/components/general/feedback-survey";
+import { SiteFooter } from "@/components/general/site-footer";
 import { loadCurrentUser } from "@/slices/auth.slice";
 import type { AppDispatch, RootState } from "@/store/store";
 import { Navigate, Route, Routes } from "react-router";
@@ -48,72 +50,77 @@ function AppRoutes() {
     void dispatch(loadCurrentUser());
   }, [dispatch]);
 
-  if (!initialized) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        Loading session...
-      </div>
-    );
-  }
-
   return (
-    <Routes>
-      {/* Public pages: signed-in admin and staff are sent to the editor instead */}
-      <Route element={<SignedInRedirect />}>
-        <Route path="/" element={<Home />} />
+    <div className="flex min-h-screen flex-col">
+      <div className="flex-1">
+        {!initialized ? (
+          <div className="flex min-h-[60vh] items-center justify-center">
+            Loading session...
+          </div>
+        ) : (
+          <Routes>
+            {/* Public pages: signed-in admin and staff are sent to the editor instead */}
+            <Route element={<SignedInRedirect />}>
+              <Route path="/" element={<Home />} />
 
-        {/* The public services guide */}
-        <Route path="/recipient" element={<GuideLayout />}>
-          <Route index element={<GuideHome />} />
-          <Route path="categories/:divisionId" element={<GuideDivision />} />
-          <Route path="services/:serviceId" element={<GuideService />} />
-        </Route>
+              {/* The public services guide */}
+              <Route path="/recipient" element={<GuideLayout />}>
+                <Route index element={<GuideHome />} />
+                <Route path="categories/:divisionId" element={<GuideDivision />} />
+                <Route path="services/:serviceId" element={<GuideService />} />
+              </Route>
 
-        <Route path="/moh" element={<Login />} />
-        <Route path="/moh/login" element={<Login />} />
-      </Route>
+              <Route path="/moh" element={<Login />} />
+              <Route path="/moh/login" element={<Login />} />
+            </Route>
 
-      {/* The services editor (admin and staff) */}
-      <Route
-        path="/moh/editor"
-        element={
-          <ProtectedRoute>
-            <Suspense
-              fallback={
-                <div className="flex min-h-screen items-center justify-center">
-                  Loading editor...
-                </div>
+            <Route path="/feedback" element={<FeedbackSurvey />} />
+
+            {/* The services editor (admin and staff) */}
+            <Route
+              path="/moh/editor"
+              element={
+                <ProtectedRoute>
+                  <Suspense
+                    fallback={
+                      <div className="flex min-h-screen items-center justify-center">
+                        Loading editor...
+                      </div>
+                    }
+                  >
+                    <EditorLayout />
+                  </Suspense>
+                </ProtectedRoute>
               }
             >
-              <EditorLayout />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<EditorHome />} />
-        <Route path="service/:serviceId" element={<ServiceEditor />} />
-        <Route path="labels" element={<LabelsPage />} />
-        <Route path="staff" element={<StaffPage />} />
-        <Route path="pdf" element={<PdfPagesPage />} />
-      </Route>
+              <Route index element={<EditorHome />} />
+              <Route path="service/:serviceId" element={<ServiceEditor />} />
+              <Route path="labels" element={<LabelsPage />} />
+              <Route path="staff" element={<StaffPage />} />
+              <Route path="pdf" element={<PdfPagesPage />} />
+            </Route>
 
-      <Route
-        path="/moh/document-editor"
-        element={
-          <Suspense
-            fallback={
-              <div className="flex min-h-screen items-center justify-center">
-                Loading document editor...
-              </div>
-            }
-          >
-            <DocumentEditor />
-          </Suspense>
-        }
-      />
+            <Route
+              path="/moh/document-editor"
+              element={
+                <Suspense
+                  fallback={
+                    <div className="flex min-h-screen items-center justify-center">
+                      Loading document editor...
+                    </div>
+                  }
+                >
+                  <DocumentEditor />
+                </Suspense>
+              }
+            />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        )}
+      </div>
+      <SiteFooter />
+    </div>
   );
 }
 

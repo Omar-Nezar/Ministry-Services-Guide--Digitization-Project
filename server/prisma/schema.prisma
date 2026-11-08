@@ -22,8 +22,23 @@ model User {
   serviceDivisions UserServiceDivision[]
   serviceAuditEntries ServiceAudit[]
   sessions         Session[]
+  feedbackResponses FeedbackResponse[]
 
   @@map("users")
+}
+
+model FeedbackResponse {
+  id            Int      @id @default(autoincrement())
+  respondentType String  @db.NVarChar(20)
+  email         String?  @db.NVarChar(320)
+  userId        Int?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// JSON object keyed by the stable question IDs in shared/feedback.ts
+  answers       String   @db.NVarChar(Max)
+  createdAt     DateTime @default(now())
+
+  @@index([respondentType, createdAt])
+  @@map("feedback_responses")
 }
 
 model Session {

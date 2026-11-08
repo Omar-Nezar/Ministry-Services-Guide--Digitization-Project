@@ -33,6 +33,19 @@ function isSafeMethod(method: string): boolean {
 export const authenticatePendingSession = (request: Request, response: Response, next: NextFunction) =>
   authenticate(request, response, next, true);
 
+/** Authenticate a valid session when present, while allowing anonymous requests. */
+export const authenticateOptionalSession = (
+  request: Request,
+  response: Response,
+  next: NextFunction,
+): void => {
+  if (!getSessionIdFromCookie(request.headers.cookie)) {
+    next();
+    return;
+  }
+  void authenticate(request, response, next, false);
+};
+
 /** Signed in, and past the first-login password step. */
 export const authenticateSession = (request: Request, response: Response, next: NextFunction) =>
   authenticate(request, response, next, false);

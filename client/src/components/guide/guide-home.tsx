@@ -23,10 +23,10 @@ export function GuideHome() {
               : `${total} services in ${tree!.length} categories`
             : isArabic
               ? "دليل خدمات الوزارة"
-              : "Ministry Services Guide"}
+              : "Ministry Services Catalogue"}
         </span>
         <h1 className="mt-4 text-3xl font-bold tracking-tight text-primary md:text-4xl">
-          {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Guide"}
+          {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Catalogue"}
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
           {isArabic

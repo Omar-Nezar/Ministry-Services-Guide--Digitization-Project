@@ -28,7 +28,7 @@ const GAP = 12;
 const COL_WIDTH = (SHEET - 2 - PAD * 2 - GAP) / 2;
 const COL_HEIGHT = 880;
 const PRINT_PAGE_SIZE = "420mm 297mm";
-const PRINT_TITLE = "Ministry Services Guide";
+const PRINT_TITLE = "Ministry Services Catalogue";
 
 // Room for a drawing on an A3 landscape page (page minus padding and the title line), in CSS px
 const DIAGRAM_AREA = { w: 1527, h: 1017 };

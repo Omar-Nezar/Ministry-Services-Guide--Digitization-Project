@@ -120,11 +120,6 @@ export function Home() {
             })}
           </section>
 
-          <footer className="mt-12 flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
-            {isArabic
-              ? "وزارة الإسكان · دليل الخدمات"
-              : "Ministry of Housing · Services Catalogue"}
-          </footer>
         </div>
       </main>
     </>

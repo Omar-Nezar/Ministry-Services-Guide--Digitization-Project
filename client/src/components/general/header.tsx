@@ -38,7 +38,7 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
         : "Export failed, try again"
       : isArabic
         ? "تصدير الدليل PDF"
-        : "Export guide PDF";
+        : "Export catalogue PDF";
 
   return (
     <>

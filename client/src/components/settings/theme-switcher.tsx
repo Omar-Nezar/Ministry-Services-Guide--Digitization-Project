@@ -102,7 +102,7 @@ export function ThemeSwitcher({
     >
       <CollapsibleTrigger
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] px-3 text-sm font-medium text-[var(--secondary-accent-foreground)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
+        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] px-3 text-sm font-medium text-(--secondary-accent-foreground) outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-(--secondary-accent-foreground)"
         aria-label={isArabic ? "إعدادات المظهر" : "Appearance settings"}
       >
         <Palette aria-hidden="true" className="size-4" />
