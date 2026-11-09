@@ -3,7 +3,7 @@ import { Link, matchPath, useLocation, useNavigate } from "react-router";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { ChevronDown, Download, FileArchive, FileText, Files, GripVertical, LoaderCircle, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { ChevronDown, Download, FileArchive, FileText, Files, GripVertical, LoaderCircle, Pencil, Plus, Search, Trash2, Workflow } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,11 @@ import { matches } from "@/lib/guide-search";
 import { cn } from "@/lib/utils";
 import { editorPaths } from "./editor-layout";
 import { exportServices, type ExportGroup } from "./export-docx";
+import { exportDiagrams } from "./export-diagrams";
+
+// The two export formats in their applications' colours (the tint marks the selected one)
+const WORD = { name: "Word", ext: ".docx", brand: "#2B579A", tint: "#2B579A1A" };
+const EXCEL = { name: "Excel", ext: ".xlsx", brand: "#217346", tint: "#2173461A" };
 
 type Props = {
   tree: EditorDivision[] | undefined;
@@ -43,6 +48,7 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
   const [adding, setAdding] = useState<number | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mode, setMode] = useState<"single" | "separate">("separate");
+  const [kind, setKind] = useState<"docs" | "diagrams">("docs");
   const [exporting, setExporting] = useState(false);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -169,13 +175,16 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
 
   const placeholder = t("ابحث عن خدمة…", "Search services…");
 
-  // ---- Word export: the ticked services (only ones that still exist), grouped by category ----
+  // ---- export: the ticked services (only ones that still exist), grouped by category ----
   const groups: ExportGroup[] = (tree ?? [])
     .map((d) => ({ name: divisionTitle(d, isArabic), services: d.services.filter((s) => selected.has(s.id)).map((s) => ({ id: s.id, name: serviceTitle(s.name) })) }))
     .filter((g) => g.services.length > 0);
   const count = groups.reduce((n, g) => n + g.services.length, 0);
   const allCount = (tree ?? []).reduce((n, d) => n + d.services.length, 0);
-  const zipped = count > 1 && (groups.length > 1 || mode === "separate");
+  // documents: one file per category ("single") or per service ("separate"); diagrams: one workbook per category
+  const zipped = kind === "diagrams" ? groups.length > 1 : count > 1 && (groups.length > 1 || mode === "separate");
+  const kindTitle = kind === "docs" ? t("تصدير الوثائق", "Export documents") : t("تصدير مخططات سير الإجراءات", "Export procedure flowcharts");
+  const app = kind === "docs" ? WORD : EXCEL;
 
   const setMany = (ids: number[], on: boolean) =>
     setSelected((s) => {
@@ -192,10 +201,12 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
   const runExport = async () => {
     setExporting(true);
     try {
-      await exportServices(groups, mode, async (id) => {
-        const service = await editorApi.service(id);
-        return { name: service.name, labels: service.labels };
-      });
+      if (kind === "diagrams") {
+        const found = await exportDiagrams(groups, (id) => editorApi.service(id));
+        if (!found) alert(t("لا توجد مخططات في الخدمات المحددة.", "The selected services have no flowcharts."));
+      } else {
+        await exportServices(groups, mode, (id) => editorApi.service(id));
+      }
     } catch (e) {
       console.error(e);
       alert(apiErrorMessage(e, `${t("تعذر تصدير الخدمات.", "Unable to export the services.")} ${e instanceof Error ? `(${e.message})` : ""}`));
@@ -211,6 +222,13 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
         <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} aria-label={placeholder} className="h-9 ps-9" />
       </div>
 
+      {tree && allCount > 0 && (
+        <div className="-mt-1 flex justify-end">
+          <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={toggleAll}>
+            {count < allCount ? t("تحديد الكل", "Select all") : t("إلغاء التحديد", "Clear selection")}
+          </Button>
+        </div>
+      )}
       {error && <p className="px-1 text-sm text-destructive">{t("تعذر تحميل الخدمات.", "Unable to load the services.")}</p>}
       {!tree && !error && (
         <div className="space-y-2">
@@ -318,27 +336,56 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
       {tree && visible.length === 0 && (
         <p className="px-1 text-sm text-muted-foreground">{t("لا توجد خدمات مطابقة.", "No matching services.")}</p>
       )}
-      {tree && allCount > 0 && (
+      {tree && count > 0 && (
         <section
-          aria-label={t("التصدير إلى Word", "Export to Word")}
+          aria-label={kindTitle}
           className="sticky bottom-0 flex flex-col gap-3 rounded-xl border bg-card p-3 shadow-sm"
         >
           <div className="flex items-center gap-2">
-            <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <FileText aria-hidden="true" className="size-4" />
+            <span className="flex size-7 items-center justify-center rounded-lg" style={{ background: app.tint, color: app.brand }}>
+              {kind === "docs" ? <FileText aria-hidden="true" className="size-4" /> : <Workflow aria-hidden="true" className="size-4" />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-sm leading-tight font-semibold">{t("تصدير إلى Word", "Export to Word")}</p>
+              <p className="text-sm leading-tight font-semibold">{kindTitle}</p>
               <p className="text-xs text-muted-foreground" aria-live="polite">
-                {count === 0 ? t("حدّد الخدمات للتصدير", "Tick services to export") : t(`${count} خدمة محددة`, `${count} selected`)}
+                {t(`${count} خدمة محددة`, `${count} selected`)}
               </p>
             </div>
-            <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={toggleAll}>
-              {count < allCount ? t("تحديد الكل", "Select all") : t("إلغاء التحديد", "Clear")}
-            </Button>
           </div>
 
-          {count > 1 && (
+          <div role="radiogroup" aria-label={t("نوع الملف", "File type")} className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["docs", FileText, WORD, t("الوثائق", "Documents")],
+                ["diagrams", Workflow, EXCEL, t("مخططات سير الإجراءات", "Flowcharts")],
+              ] as const
+            ).map(([value, Icon, f, label]) => {
+              const on = kind === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setKind(value)}
+                  style={{ borderColor: on ? f.brand : undefined, background: on ? f.tint : undefined }}
+                  className={cn("flex flex-col items-start gap-2 rounded-lg border p-2 text-start transition-colors", !on && "hover:bg-muted")}
+                >
+                  <span className="flex size-8 items-center justify-center rounded-md text-white" style={{ background: f.brand }}>
+                    <Icon aria-hidden="true" className="size-4" />
+                  </span>
+                  <span className="text-xs leading-tight font-semibold" style={on ? { color: f.brand } : undefined}>
+                    {label}
+                  </span>
+                  <span dir="ltr" className="text-[11px] text-muted-foreground">
+                    {f.name} · {f.ext}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {count > 1 && kind === "docs" && (
             <div role="radiogroup" aria-label={t("طريقة التصدير", "Export layout")} className="grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
               {(
                 [
@@ -367,19 +414,35 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
           {count > 1 && (
             <p className="flex items-start gap-1.5 text-[11px] leading-4 text-muted-foreground">
               <FileArchive aria-hidden="true" className="mt-px size-3.5 shrink-0" />
-              {zipped
-                ? mode === "single"
-                  ? t("ملف مضغوط (ZIP) يضم ملفًا واحدًا لكل فئة.", "A ZIP with one file per category.")
-                  : groups.length > 1
-                    ? t("ملف مضغوط (ZIP) بمجلد لكل فئة، وفيه ملف لكل خدمة.", "A ZIP with a folder per category, one file per service.")
-                    : t("ملف مضغوط (ZIP) يضم ملفًا لكل خدمة.", "A ZIP with one file per service.")
-                : t("ملف Word واحد يضم الخدمات المحددة.", "A single Word file with the selected services.")}
+              {kind === "diagrams"
+                ? zipped
+                  ? t("ملف مضغوط (ZIP) يضم ملف Excel لكل فئة، وكل مخطط فيه ورقة منفصلة.", "A ZIP with one Excel file per category, each diagram on its own sheet.")
+                  : t("ملف Excel واحد، وكل مخطط فيه ورقة منفصلة.", "One Excel file, each diagram on its own sheet.")
+                : zipped
+                  ? mode === "single"
+                    ? t("ملف مضغوط (ZIP) يضم ملفًا واحدًا لكل فئة.", "A ZIP with one file per category.")
+                    : groups.length > 1
+                      ? t("ملف مضغوط (ZIP) بمجلد لكل فئة، وفيه ملف لكل خدمة.", "A ZIP with a folder per category, one file per service.")
+                      : t("ملف مضغوط (ZIP) يضم ملفًا لكل خدمة.", "A ZIP with one file per service.")
+                  : t("ملف Word واحد يضم الخدمات المحددة.", "A single Word file with the selected services.")}
             </p>
           )}
 
-          <Button type="button" disabled={count === 0 || exporting} onClick={() => void runExport()} className="w-full">
+          <Button
+            type="button"
+            disabled={exporting}
+            onClick={() => void runExport()}
+            className="w-full text-white hover:opacity-90"
+            style={{ background: app.brand }}
+          >
             {exporting ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : <Download aria-hidden="true" />}
-            {exporting ? t("جارٍ التصدير…", "Exporting…") : zipped ? t("تنزيل ZIP", "Download ZIP") : t("تنزيل Word", "Download Word")}
+            {exporting
+              ? t("جارٍ التصدير…", "Exporting…")
+              : zipped
+                ? t("تنزيل ZIP", "Download ZIP")
+                : kind === "diagrams"
+                  ? t("تنزيل Excel (.xlsx)", "Download Excel (.xlsx)")
+                  : t("تنزيل Word (.docx)", "Download Word (.docx)")}
           </Button>
         </section>
       )}
