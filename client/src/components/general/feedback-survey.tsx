@@ -47,6 +47,14 @@ function getErrorMessage(error: unknown, isArabic: boolean): string {
     : "We couldn't submit your feedback. Check your connection and try again.";
 }
 
+function getFirstStepId(respondentType: FeedbackRespondentType): string {
+  const firstStep = feedbackQuestions[respondentType][0];
+  if (!firstStep) {
+    throw new Error(`No feedback survey steps configured for ${respondentType}.`);
+  }
+  return firstStep.id;
+}
+
 export function FeedbackSurvey() {
   const { isArabic } = useLanguage();
   const user = useSelector((state: RootState) => state.auth.user);
@@ -64,7 +72,7 @@ export function FeedbackSurvey() {
   const [reviewing, setReviewing] = useState(false);
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, string>>({});
   const [activeQuestion, setActiveQuestion] = useState(
-    isStaff ? feedbackQuestions.staff[0].id : "respondentType",
+    isStaff ? getFirstStepId("staff") : "respondentType",
   );
 
   const roleItems = [
@@ -75,14 +83,40 @@ export function FeedbackSurvey() {
     },
   ] as const;
 
-  const questions = respondentType ? feedbackQuestions[respondentType] : [];
-  const questionItems = questions.map((question) => ({
-    name: question.id,
-    required: question.required,
-    prompt: isArabic ? question.promptAr : question.prompt,
-    ...(question.type === "choice"
+  const surveyItems = respondentType ? feedbackQuestions[respondentType] : [];
+  const questions = surveyItems.filter((item) => item.type !== "section");
+  const surveySections = surveyItems.filter((item) => item.type === "section");
+  const activeSectionStep = surveyItems.find(
+    (item) => item.type === "section" && item.id === activeQuestion,
+  );
+  const sectionByQuestion = new Map<
+    string,
+    Extract<(typeof surveyItems)[number], { type: "section" }>
+  >();
+  let currentSection: Extract<(typeof surveyItems)[number], { type: "section" }> | undefined;
+  for (const item of surveyItems) {
+    if (item.type === "section") {
+      currentSection = item;
+    } else if (currentSection) {
+      sectionByQuestion.set(item.id, currentSection);
+    }
+  }
+  const activeSection = sectionByQuestion.get(activeQuestion);
+  const activeStepIndex = surveyItems.findIndex((item) => item.id === activeQuestion);
+  const nextSurveyStep = surveyItems[activeStepIndex + 1];
+  const activeQuestionNumber = questions.findIndex(
+    (question) => question.id === activeQuestion,
+  ) + 1;
+  const questionItems = surveyItems.map((item) => ({
+    name: item.id,
+    required: item.type === "section" ? false : item.required,
+    prompt:
+      item.type === "section"
+        ? isArabic ? item.titleAr : item.title
+        : isArabic ? item.promptAr : item.prompt,
+    ...(item.type === "choice"
       ? {
-          choices: question.options.map((option) => ({
+          choices: item.options.map((option) => ({
             value: option.value,
             label: isArabic ? option.labelAr : option.label,
           })),
@@ -95,7 +129,7 @@ export function FeedbackSurvey() {
     const choice = new FormData(event.currentTarget).get("respondentType");
     if (choice !== "staff" && choice !== "recipient") return;
     setRespondentType(choice);
-    setActiveQuestion(feedbackQuestions[choice][0].id);
+    setActiveQuestion(getFirstStepId(choice));
     setEmailAccepted(choice === "recipient");
     setEmailError("");
     setSubmitError("");
@@ -118,7 +152,7 @@ export function FeedbackSurvey() {
       await feedbackApi.validateStaffEmail(email);
       setStaffEmail(email);
       setEmailAccepted(true);
-      setActiveQuestion(feedbackQuestions.staff[0].id);
+      setActiveQuestion(getFirstStepId("staff"));
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const code = error.response?.data?.code;
@@ -222,6 +256,23 @@ export function FeedbackSurvey() {
                     ? "شاركنا رأيك لمساعدتنا على تطوير دليل الخدمات."
                     : "Tell us what you think to help improve the services catalogue."}
                 </p>
+                {respondentType && emailAccepted && !reviewing && !activeSectionStep && activeSection && (
+                  <div
+                    className="mt-4 flex flex-col gap-0.5 rounded-lg border bg-muted/40 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3"
+                    role="status"
+                    aria-atomic="true"
+                  >
+                    <span className="text-xs font-semibold tracking-wide text-muted-foreground">
+                      {isArabic ? "القسم الحالي" : "CURRENT SECTION"}
+                    </span>
+                    <span className="hidden text-muted-foreground sm:inline" aria-hidden="true">
+                      /
+                    </span>
+                    <span className="text-sm font-medium">
+                      {isArabic ? activeSection.titleAr : activeSection.title}
+                    </span>
+                  </div>
+                )}
                 {user && (
                   <p className="mt-3 rounded-lg bg-muted px-3 py-2 text-sm">
                     {isArabic ? "تم التعرف عليك باستخدام حسابك:" : "Identified using your signed-in account:"}{" "}
@@ -304,48 +355,75 @@ export function FeedbackSurvey() {
                           : "You can edit any answer before submitting the survey."}
                       </p>
                     </div>
-                    <dl className="space-y-3">
-                      {questions.map((question) => {
-                        const answer = answersByQuestion[question.id] ?? "";
-                        const summary =
-                          question.type === "choice"
-                            ? question.options.find((option) => option.value === answer)
-                            : null;
-                        const answerLabel =
-                          question.type === "choice"
-                            ? summary
-                              ? isArabic ? summary.labelAr : summary.label
-                              : isArabic ? "بدون إجابة" : "No answer"
-                            : answer.trim()
-                              ? answer
-                              : isArabic ? "تم التخطي" : "Skipped";
+                    <div className="space-y-4">
+                      {surveySections.map((section) => {
+                        const sectionQuestions = questions.filter(
+                          (question) => sectionByQuestion.get(question.id)?.id === section.id,
+                        );
 
                         return (
-                          <div
-                            key={question.id}
-                            className="rounded-xl border bg-background p-4"
+                          <section
+                            key={section.id}
+                            className="rounded-xl border p-4"
+                            aria-labelledby={`feedback-review-${section.id}`}
                           >
-                            <dt className="font-medium">
-                              {isArabic ? question.promptAr : question.prompt}
-                            </dt>
-                            <dd className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-                              {answerLabel}
-                            </dd>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSubmitError("");
-                                setActiveQuestion(question.id);
-                                setReviewing(false);
-                              }}
-                              className="mt-3 min-h-9 rounded-md px-2 text-sm font-medium text-primary underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            <h3
+                              id={`feedback-review-${section.id}`}
+                              className="font-semibold"
                             >
-                              {isArabic ? "تعديل الإجابة" : "Edit answer"}
-                            </button>
-                          </div>
+                              {isArabic ? section.titleAr : section.title}
+                            </h3>
+                            {(isArabic ? section.descriptionAr : section.description) && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {isArabic ? section.descriptionAr : section.description}
+                              </p>
+                            )}
+                            <dl className="mt-3 space-y-3">
+                              {sectionQuestions.map((question) => {
+                                const answer = answersByQuestion[question.id] ?? "";
+                                const summary =
+                                  question.type === "choice"
+                                    ? question.options.find((option) => option.value === answer)
+                                    : null;
+                                const answerLabel =
+                                  question.type === "choice"
+                                    ? summary
+                                      ? isArabic ? summary.labelAr : summary.label
+                                      : isArabic ? "بدون إجابة" : "No answer"
+                                    : answer.trim()
+                                      ? answer
+                                      : isArabic ? "تم التخطي" : "Skipped";
+
+                                return (
+                                  <div
+                                    key={question.id}
+                                    className="rounded-lg border bg-background p-4"
+                                  >
+                                    <dt className="font-medium">
+                                      {isArabic ? question.promptAr : question.prompt}
+                                    </dt>
+                                    <dd className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+                                      {answerLabel}
+                                    </dd>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSubmitError("");
+                                        setActiveQuestion(question.id);
+                                        setReviewing(false);
+                                      }}
+                                      className="mt-3 min-h-9 rounded-md px-2 text-sm font-medium text-primary underline underline-offset-4 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                      {isArabic ? "تعديل الإجابة" : "Edit answer"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </dl>
+                          </section>
                         );
                       })}
-                    </dl>
+                    </div>
                     {submitError && (
                       <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                         {submitError}
@@ -383,73 +461,121 @@ export function FeedbackSurvey() {
                     onItemChange={setActiveQuestion}
                     onSubmit={showReview}
                   >
-                    <QuestionnaireProgress />
-                    {questions.map((question) => (
-                      <QuestionnaireItem
-                        key={question.id}
-                        name={question.id}
-                        required={question.required}
+                    {!activeSectionStep && activeQuestionNumber > 0 && (
+                      <p
+                        aria-live="polite"
+                        className="min-h-lh w-fit min-w-[14ch] text-xs font-medium text-muted-foreground tabular-nums"
                       >
-                        <QuestionnaireTitle>
-                          {isArabic ? question.promptAr : question.prompt}
-                        </QuestionnaireTitle>
-                        {question.type === "choice" ? (
-                          <QuestionnaireChoices>
-                            {question.options.map((option) => (
-                              <QuestionnaireChoice
-                                key={option.value}
-                                value={option.value}
-                                checked={answersByQuestion[question.id] === option.value}
-                                onChange={(event) => {
-                                  if (event.currentTarget.checked) {
-                                    setAnswersByQuestion((current) => ({
-                                      ...current,
-                                      [question.id]: option.value,
-                                    }));
-                                    setSubmitError("");
-                                  }
-                                }}
-                              >
-                                {isArabic ? option.labelAr : option.label}
-                              </QuestionnaireChoice>
-                            ))}
-                          </QuestionnaireChoices>
-                        ) : (
-                          <>
-                            <QuestionnaireDescription>
-                              {isArabic
-                                ? `يمكنك كتابة ما يصل إلى ${question.maxLength} حرفًا.`
-                                : `Share as much detail as you'd like, up to ${question.maxLength} characters.`}
-                            </QuestionnaireDescription>
-                            <QuestionnaireInput
-                              aria-label={isArabic ? question.promptAr : question.prompt}
-                              value={answersByQuestion[question.id] ?? ""}
-                              onChange={(event) => {
-                                const value = event.currentTarget.value;
-                                setAnswersByQuestion((current) => ({
-                                  ...current,
-                                  [question.id]: value,
-                                }));
-                                setSubmitError("");
-                              }}
-                              maxLength={question.maxLength}
-                              render={
-                                <textarea
-                                  rows={6}
-                                  placeholder={
-                                    isArabic
-                                      ? "اكتب ملاحظاتك هنا..."
-                                      : "Write your feedback here..."
-                                  }
-                                  className="min-h-36 w-full resize-y rounded-lg border border-input bg-background px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                        {isArabic
+                          ? `السؤال ${activeQuestionNumber} من ${questions.length}`
+                          : `Question ${activeQuestionNumber} of ${questions.length}`}
+                      </p>
+                    )}
+                    {surveyItems.map((item) => {
+                      if (item.type === "section") {
+                        return (
+                          <QuestionnaireItem
+                            key={item.id}
+                            name={item.id}
+                            required={false}
+                          >
+                            <section
+                              aria-labelledby={`feedback-section-${item.id}`}
+                              className="space-y-4 border-y border-border/70 py-6"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs font-semibold tracking-[0.16em] text-primary">
+                                  {isArabic ? "القسم" : "SECTION"}
+                                </span>
+                                <span
+                                  aria-hidden="true"
+                                  className="h-px flex-1 bg-border"
                                 />
-                              }
-                            />
-                          </>
-                        )}
-                        <QuestionnaireError />
-                      </QuestionnaireItem>
-                    ))}
+                              </div>
+                              <h2
+                                id={`feedback-section-${item.id}`}
+                                className="text-xl font-semibold tracking-tight"
+                              >
+                                {isArabic ? item.titleAr : item.title}
+                              </h2>
+                              {(isArabic ? item.descriptionAr : item.description) && (
+                                <p className="max-w-prose text-sm leading-6 text-muted-foreground">
+                                  {isArabic ? item.descriptionAr : item.description}
+                                </p>
+                              )}
+                            </section>
+                          </QuestionnaireItem>
+                        );
+                      }
+
+                      const question = item;
+                      return (
+                        <QuestionnaireItem
+                          key={question.id}
+                          name={question.id}
+                          required={question.required}
+                        >
+                          <QuestionnaireTitle>
+                            {isArabic ? question.promptAr : question.prompt}
+                          </QuestionnaireTitle>
+                          {question.type === "choice" ? (
+                            <QuestionnaireChoices>
+                              {question.options.map((option) => (
+                                <QuestionnaireChoice
+                                  key={option.value}
+                                  value={option.value}
+                                  checked={answersByQuestion[question.id] === option.value}
+                                  onChange={(event) => {
+                                    if (event.currentTarget.checked) {
+                                      setAnswersByQuestion((current) => ({
+                                        ...current,
+                                        [question.id]: option.value,
+                                      }));
+                                      setSubmitError("");
+                                    }
+                                  }}
+                                >
+                                  {isArabic ? option.labelAr : option.label}
+                                </QuestionnaireChoice>
+                              ))}
+                            </QuestionnaireChoices>
+                          ) : (
+                            <>
+                              <QuestionnaireDescription>
+                                {isArabic
+                                  ? `يمكنك كتابة ما يصل إلى ${question.maxLength} حرفًا.`
+                                  : `Share as much detail as you'd like, up to ${question.maxLength} characters.`}
+                              </QuestionnaireDescription>
+                              <QuestionnaireInput
+                                aria-label={isArabic ? question.promptAr : question.prompt}
+                                value={answersByQuestion[question.id] ?? ""}
+                                onChange={(event) => {
+                                  const value = event.currentTarget.value;
+                                  setAnswersByQuestion((current) => ({
+                                    ...current,
+                                    [question.id]: value,
+                                  }));
+                                  setSubmitError("");
+                                }}
+                                maxLength={question.maxLength}
+                                render={
+                                  <textarea
+                                    rows={6}
+                                    placeholder={
+                                      isArabic
+                                        ? "اكتب ملاحظاتك هنا..."
+                                        : "Write your feedback here..."
+                                    }
+                                    className="min-h-36 w-full resize-y rounded-lg border border-input bg-background px-2.5 py-2 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                                  />
+                                }
+                              />
+                            </>
+                          )}
+                          <QuestionnaireError />
+                        </QuestionnaireItem>
+                      );
+                    })}
                     {submitError && (
                       <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                         {submitError}
@@ -459,12 +585,34 @@ export function FeedbackSurvey() {
                       <QuestionnairePrevious>
                         {isArabic ? "السابق" : "Previous"}
                       </QuestionnairePrevious>
-                      <QuestionnaireSkip>
-                        {isArabic ? "تخطي" : "Skip"}
-                      </QuestionnaireSkip>
-                      <QuestionnaireNext>
-                        {isArabic ? "التالي" : "Next"}
-                      </QuestionnaireNext>
+                      {!activeSectionStep && nextSurveyStep && (
+                        <QuestionnaireSkip>
+                          {isArabic ? "تخطي" : "Skip"}
+                        </QuestionnaireSkip>
+                      )}
+                      {!activeSectionStep && !nextSurveyStep && (
+                        <button
+                          type="button"
+                          onClick={() => setReviewing(true)}
+                          className="col-start-2 row-start-1 inline-flex min-h-11 items-center justify-center rounded-lg border px-4 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:min-h-8"
+                        >
+                          {isArabic ? "تخطي" : "Skip"}
+                        </button>
+                      )}
+                      {!activeSectionStep && nextSurveyStep && (
+                        <QuestionnaireNext>
+                          {isArabic ? "التالي" : "Next"}
+                        </QuestionnaireNext>
+                      )}
+                      {activeSectionStep && nextSurveyStep && (
+                        <button
+                          type="button"
+                          onClick={() => setActiveQuestion(nextSurveyStep.id)}
+                          className="col-start-3 row-start-1 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground outline-none transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:min-h-8"
+                        >
+                          {isArabic ? "متابعة" : "Continue"}
+                        </button>
+                      )}
                       <QuestionnaireSubmit>
                         {isArabic ? "مراجعة الإجابات" : "Review answers"}
                       </QuestionnaireSubmit>

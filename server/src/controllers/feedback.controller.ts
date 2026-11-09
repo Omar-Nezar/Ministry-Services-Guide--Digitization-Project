@@ -31,7 +31,9 @@ function parseSubmission(
   }
   if (!isRecord(value.answers)) return null;
 
-  const questions = feedbackQuestions[respondentType];
+  const questions = feedbackQuestions[respondentType].filter(
+    (question) => question.type !== "section",
+  );
   const answerIds = new Set<string>(questions.map((question) => question.id));
   const answerEntries = Object.entries(value.answers);
   if (
