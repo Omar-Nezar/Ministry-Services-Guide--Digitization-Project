@@ -8,29 +8,29 @@ type FeedbackChoice = {
 
 type FeedbackQuestion =
   | {
-      id: string;
-      type: "section";
-      title: string;
-      titleAr: string;
-      description?: string;
-      descriptionAr?: string;
-    }
+    id: string;
+    type: "section";
+    title: string;
+    titleAr: string;
+    description?: string;
+    descriptionAr?: string;
+  }
   | {
-      id: string;
-      type: "choice";
-      prompt: string;
-      promptAr: string;
-      required: true;
-      options: readonly FeedbackChoice[];
-    }
+    id: string;
+    type: "choice";
+    prompt: string;
+    promptAr: string;
+    required: true;
+    options: readonly FeedbackChoice[];
+  }
   | {
-      id: string;
-      type: "text";
-      prompt: string;
-      promptAr: string;
-      required: false;
-      maxLength: number;
-    };
+    id: string;
+    type: "text";
+    prompt: string;
+    promptAr: string;
+    required: false;
+    maxLength: number;
+  };
 
 const yesNoOptions = [
   { value: "yes", label: "Yes", labelAr: "نعم" },
@@ -39,11 +39,27 @@ const yesNoOptions = [
 ] as const;
 
 const satisfactionOptions = [
+  { value: "very_satisfied", label: "Very satisfied", labelAr: "راضٍ جدًا" },
   { value: "satisfied", label: "Satisfied", labelAr: "راضٍ" },
-  { value: "somewhat_satisfied", label: "Somewhat satisfied", labelAr: "إلى حد ما راضٍ" },
   { value: "neutral", label: "Neutral", labelAr: "محايد" },
-  { value: "somewhat_dissatisfied", label: "Somewhat dissatisfied", labelAr: "إلى حد ما غير راضٍ" },
   { value: "dissatisfied", label: "Dissatisfied", labelAr: "غير راضٍ" },
+  { value: "very_dissatisfied", label: "Very dissatisfied", labelAr: "غير راضٍ جدًا" },
+] as const;
+
+const experienceOptions = [
+  { value: "beginner", label: "Beginner", labelAr: "مبتدئ" },
+  { value: "amateur", label: "Amateur", labelAr: "هاوٍ" },
+  { value: "modest", label: "Modest", labelAr: "متوسط الخبرة" },
+  { value: "professional", label: "Professional", labelAr: "محترف" },
+  { value: "expert", label: "Expert", labelAr: "خبير" },
+] as const;
+
+const frequencyOptions = [
+  { value: "very_frequently", label: "Very frequently", labelAr: "بشكل متكرر جدًا" },
+  { value: "frequently", label: "Frequently", labelAr: "بشكل متكرر" },
+  { value: "occasionally", label: "Occasionally", labelAr: "أحيانًا" },
+  { value: "rarely", label: "Rarely", labelAr: "نادرًا" },
+  { value: "very_rarely", label: "Very rarely", labelAr: "نادرًا جدًا" },
 ] as const;
 
 const feedbackLimit = 4000;
@@ -64,7 +80,23 @@ export const feedbackQuestions = {
       id: "staff_workflow_clarity",
       type: "choice",
       prompt: "Are the service workflows clear and easy to maintain?",
-      promptAr: "هل إجراءات الخدمات واضحة وسهلة التحديث؟",
+      promptAr: "هل إجراءات العمل الخاصة بالخدمات واضحة وسهلة الصيانة؟",
+      required: true,
+      options: yesNoOptions,
+    },
+    {
+      id: "staff_workflow_tools",
+      type: "choice",
+      prompt: "Are all the tools you need to maintain the service workflows available?",
+      promptAr: "هل تتوفر جميع الأدوات اللازمة لصيانة إجراءات العمل الخاصة بالخدمات؟",
+      required: true,
+      options: yesNoOptions,
+    },
+    {
+      id: "staff_workflow_understanding",
+      type: "choice",
+      prompt: "Are the interfaces clear and easy to understand?",
+      promptAr: "هل الواجهات واضحة وسهلة الفهم؟",
       required: true,
       options: yesNoOptions,
     },
@@ -77,17 +109,57 @@ export const feedbackQuestions = {
       descriptionAr: "أخبرنا الآن عن مدى رضاك عن أدوات الوزارة وتجربتك.",
     },
     {
+      id: "staff_experience_choice",
+      type: "choice",
+      prompt: "Please indicate your level of experience with the program",
+      promptAr: "يرجى تحديد مستوى خبرتك في استخدام البرنامج.",
+      required: true,
+      options: experienceOptions,
+    },
+    {
       id: "staff_navigation_satisfaction",
       type: "choice",
-      prompt: "How statisfied are you with the websites navigation?",
-      promptAr: "هل تساعدك أدوات الدليل على إنجاز عملك بفاعلية؟",
+      prompt: "How satisfied are you with the website's navigation?",
+      promptAr: "ما مدى رضاك عن سهولة التنقل في الموقع؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "staff_speed_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the website's speed? Do you feel your work has been sped up by using the website?",
+      promptAr: "ما مدى رضاك عن سرعة الموقع؟ وهل تشعر أن استخدام الموقع قد سرّع إنجاز عملك؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "staff_intuitiveness_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the website's intuitiveness and ease of use? Were you able to begin using the program in a short time without training?",
+      promptAr: "ما مدى رضاك عن سهولة استخدام الموقع ووضوحه؟ وهل تمكنت من البدء باستخدام البرنامج خلال وقت قصير ودون تدريب؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "staff_accessibility_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the website's accessibility? (e.g. for people with disabilities, or using mobile devices)",
+      promptAr: "ما مدى رضاك عن سهولة الوصول إلى الموقع (مثلًا للأشخاص ذوي الإعاقة أو مستخدمي الأجهزة المحمولة)؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "staff_ui_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the website's visual design and customizations?",
+      promptAr: "ما مدى رضاك عن التصميم المرئي للموقع وإمكانية تخصيصه؟",
       required: true,
       options: satisfactionOptions,
     },
     {
       id: "staff_overall_satisfaction",
       type: "choice",
-      prompt: "How satisfied are you with the staff experience?",
+      prompt: "How satisfied are you with the staff experience overall?",
       promptAr: "ما مدى رضاك عن تجربة الموظفين؟",
       required: true,
       options: satisfactionOptions,
@@ -135,12 +207,52 @@ export const feedbackQuestions = {
       options: yesNoOptions,
     },
     {
+      id: "recipient_information_complete",
+      type: "choice",
+      prompt: "Was the service information complete and up-to-date?",
+      promptAr: "هل كانت معلومات الخدمة كاملة ومحدثة؟",
+      required: true,
+      options: yesNoOptions,
+    },
+    {
       id: "recipient_experience_section",
       type: "section",
       title: "Overall satisfaction",
       titleAr: "الرضا العام",
       description: "Next, tell us how satisfied you are with the services catalogue.",
       descriptionAr: "أخبرنا الآن عن مدى رضاك عن دليل الخدمات.",
+    },
+    {
+      id: "recipient_usage_frequency",
+      type: "choice",
+      prompt: "How often do you use the service?",
+      promptAr: "كم مرة تستخدم الخدمة؟",
+      required: true,
+      options: frequencyOptions,
+    },
+    {
+      id: "recipient_speed_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the speed of the service? Do you feel that it's much faster than a traditional service?",
+      promptAr: "ما مدى رضاك عن سرعة الخدمة؟ وهل تشعر أنها أسرع بكثير من الخدمة التقليدية؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "recipient_accessibility_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the accessibility of the service? (e.g. for people with disabilities, or using mobile devices)",
+      promptAr: "ما مدى رضاك عن سهولة الوصول إلى الخدمة (مثلًا للأشخاص ذوي الإعاقة أو مستخدمي الأجهزة المحمولة)؟",
+      required: true,
+      options: satisfactionOptions,
+    },
+    {
+      id: "recipient_ui_satisfaction",
+      type: "choice",
+      prompt: "How satisfied are you with the user interface / visual design of the service?",
+      promptAr: "ما مدى رضاك عن واجهة المستخدم / التصميم البصري للخدمة؟",
+      required: true,
+      options: satisfactionOptions,
     },
     {
       id: "recipient_overall_satisfaction",

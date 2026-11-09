@@ -187,6 +187,18 @@ export function FeedbackSurvey() {
   async function submitAnswers() {
     if (!respondentType || !emailAccepted || submitting) return;
 
+    const unansweredRequiredQuestion = questions.find(
+      (question) => question.required && !answersByQuestion[question.id],
+    );
+    if (unansweredRequiredQuestion) {
+      setSubmitError(
+        isArabic
+          ? "يرجى الإجابة عن جميع الأسئلة المطلوبة قبل إرسال الاستبيان."
+          : "Please answer all required questions before submitting the survey.",
+      );
+      return;
+    }
+
     const answers = Object.fromEntries(
       questions.map((question) => [
         question.id,
@@ -613,9 +625,15 @@ export function FeedbackSurvey() {
                           {isArabic ? "متابعة" : "Continue"}
                         </button>
                       )}
-                      <QuestionnaireSubmit>
-                        {isArabic ? "مراجعة الإجابات" : "Review answers"}
-                      </QuestionnaireSubmit>
+                      {!nextSurveyStep && (
+                        <button
+                          type="button"
+                          onClick={() => setReviewing(true)}
+                          className="col-start-3 row-start-1 inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground outline-none transition-colors hover:bg-primary/90 focus-visible:ring-2 focus-visible:ring-ring sm:min-h-8"
+                        >
+                          {isArabic ? "مراجعة الإجابات" : "Review answers"}
+                        </button>
+                      )}
                     </QuestionnaireActions>
                   </Questionnaire>
                   </>
