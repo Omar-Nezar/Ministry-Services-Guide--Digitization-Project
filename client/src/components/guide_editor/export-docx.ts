@@ -106,15 +106,18 @@ function blocks(parent: Node, out: Paragraph[], list?: List) {
   flush();
 }
 
-export function toDocx(name: string, labels: GuideLabel[]) {
-  const out: Paragraph[] = [
+export type DocxItem = { name: string; labels: GuideLabel[] };
+
+function serviceParagraphs(name: string, labels: GuideLabel[], pageBreak: boolean, out: Paragraph[]) {
+  out.push(
     new Paragraph({
       heading: HeadingLevel.TITLE,
       bidirectional: true,
+      pageBreakBefore: pageBreak,
       spacing: { after: 240 },
       children: [run(name, { bold: true, size: 40 })],
     }),
-  ];
+  );
   for (const label of labels) {
     const body = new DOMParser().parseFromString(label.html, "text/html").body;
     if (!body.textContent?.trim()) continue;
@@ -129,16 +132,76 @@ export function toDocx(name: string, labels: GuideLabel[]) {
     );
     blocks(body, out);
   }
+}
+
+/** One document holding every given service, each starting on a new page. */
+export function toDocxMany(items: DocxItem[]) {
+  const out: Paragraph[] = [];
+  items.forEach((item, i) => serviceParagraphs(item.name, item.labels, i > 0, out));
   const levels = Array.from({ length: 6 }, (_, level) => ({ level, format: "decimal" as const, text: `%${level + 1}.`, alignment: AlignmentType.START }));
   return new Document({ numbering: { config: [{ reference: "ordered", levels }] }, sections: [{ children: out }] });
 }
 
-export async function downloadDocx(name: string, labels: GuideLabel[]) {
-  const blob = await Packer.toBlob(toDocx(name, labels));
+export const toDocx = (name: string, labels: GuideLabel[]) => toDocxMany([{ name, labels }]);
+
+export const docxBlob = (items: DocxItem[]) => Packer.toBlob(toDocxMany(items));
+
+/** A name that is safe as a file or folder name. */
+export const safeFileName = (name: string, fallback = "service") =>
+  // long names break Windows' path limit when the zip is extracted, so they are cut
+  name.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim().slice(0, 60).trim() || fallback;
+
+export function saveBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${name.replace(/[\\/:*?"<>|]/g, "").trim() || "service"}.docx`;
+  a.download = fileName;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadDocx(name: string, labels: GuideLabel[]) {
+  saveBlob(await docxBlob([{ name, labels }]), `${safeFileName(name)}.docx`);
+}
+
+export type ExportGroup = { name: string; services: { id: number; name: string }[] };
+
+/**
+ * Exports the chosen services. One service is a single .docx. With more, "single" puts each category's services in
+ * one file and "separate" gives every service its own file. Anything that ends up as several files (more than one
+ * category, or separate files) is zipped, with a folder per category when the services span several.
+ */
+export async function exportServices(groups: ExportGroup[], mode: "single" | "separate", load: (id: number) => Promise<DocxItem>) {
+  const total = groups.reduce((n, g) => n + g.services.length, 0);
+  if (total === 0) return;
+  const loaded = new Map<number, DocxItem>();
+  for (const g of groups) for (const s of g.services) loaded.set(s.id, await load(s.id));
+  const item = (s: { id: number; name: string }): DocxItem => ({ ...loaded.get(s.id)!, name: s.name });
+
+  if (total === 1) {
+    const s = groups[0].services[0];
+    return saveBlob(await docxBlob([item(s)]), `${safeFileName(s.name)}.docx`);
+  }
+  if (mode === "single" && groups.length === 1) {
+    return saveBlob(await docxBlob(groups[0].services.map(item)), `${safeFileName(groups[0].name, "services")}.docx`);
+  }
+
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  const used = new Set<string>();
+  const unique = (path: string) => {
+    let candidate = `${path}.docx`;
+    for (let i = 2; used.has(candidate); i++) candidate = `${path} (${i}).docx`;
+    used.add(candidate);
+    return candidate;
+  };
+  for (const g of groups) {
+    const folder = groups.length > 1 ? `${safeFileName(g.name, "category")}/` : "";
+    if (mode === "single") {
+      zip.file(unique(`${folder}${safeFileName(g.name, "services")}`), await docxBlob(g.services.map(item)));
+    } else {
+      for (const s of g.services) zip.file(unique(`${folder}${safeFileName(s.name)}`), await docxBlob([item(s)]));
+    }
+  }
+  saveBlob(await zip.generateAsync({ type: "blob" }), "services.zip");
 }

@@ -210,64 +210,103 @@ const REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships
 const rels = (items: [string, string, string][]) =>
   `${XML}<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${items.map(([id, type, target]) => `<Relationship Id="${id}" Type="${REL}/${type}" Target="${target}"/>`).join("")}</Relationships>`;
 
-/** Builds the .xlsx file for a diagram. */
-export async function buildDiagramXlsx(source: CopyDoc, color?: string | null): Promise<Blob> {
-  const themed = themeDoc(source, color);
-  const doc = { ...themed, cells: [...(themed.bg ?? []), ...themed.cells] };
+const SHEET_NAME_MAX = 31; // Excel's limit
+
+/** Sheet names Excel accepts: no []:*?/\ , at most 31 characters, unique within the workbook. */
+function sheetNames(names: string[]): string[] {
+  const used = new Set<string>();
+  return names.map((raw) => {
+    const base = raw.replace(/[[\]:*?/\\]/g, " ").replace(/\s+/g, " ").replace(/^'+|'+$/g, "").trim() || "مخطط";
+    let name = base.slice(0, SHEET_NAME_MAX);
+    for (let i = 2; used.has(name.toLowerCase()); i++) {
+      const tail = ` (${i})`;
+      name = base.slice(0, SHEET_NAME_MAX - tail.length) + tail;
+    }
+    used.add(name.toLowerCase());
+    return name;
+  });
+}
+
+export type DiagramSheet = { name: string; doc: CopyDoc; color?: string | null };
+
+/** Builds one .xlsx with a sheet per diagram, in the order given. */
+export async function buildWorkbook(sheets: DiagramSheet[]): Promise<Blob> {
   const JSZip = (await import("jszip")).default;
   const zip = new JSZip();
   const put = (name: string, data: string, o?: object) => zip.file(name, data, { createFolders: false, ...o });
 
-  // pictures (png / jpeg / gif data URLs only)
-  const media: [string, string, string][] = [];
-  const imageOf = new Map<string, string>();
-  for (const s of doc.shapes) {
-    const m = s.img && /^data:image\/(png|jpe?g|gif);base64,(.+)$/s.exec(s.img);
-    if (!m) continue;
-    const ext = m[1] === "jpg" ? "jpeg" : m[1];
-    const rid = `rId${media.length + 1}`;
-    put(`xl/media/image${media.length + 1}.${ext}`, m[2], { base64: true });
-    media.push([rid, "image", `../media/image${media.length + 1}.${ext}`]);
-    imageOf.set(s.id, rid);
-  }
+  const styles = new Styles(); // shared by every sheet
+  const names = sheetNames(sheets.map((s) => s.name));
+  const exts = new Set<string>();
+  const sheetEntries: string[] = [];
+  const workbookRels: [string, string, string][] = [];
+  const overrides: string[] = [];
+  let pictures = 0;
 
-  let id = 1;
-  const drawing =
-    `${XML}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${REL}">` +
-    doc.shapes.map((s) => shapeXml(s, ++id, imageOf.get(s.id))).join("") +
-    doc.lines.map((l) => lineXml(l, ++id)).join("") +
-    `</xdr:wsDr>`;
+  sheets.forEach((sheet, n) => {
+    const i = n + 1;
+    const themed = themeDoc(sheet.doc, sheet.color);
+    const doc = { ...themed, cells: [...(themed.bg ?? []), ...themed.cells] };
 
-  const styles = new Styles();
-  const sheet = sheetXml(doc, styles);
-  const exts = new Set(media.map((m) => m[2].split(".").pop()!));
+    // pictures (png / jpeg / gif data URLs only)
+    const media: [string, string, string][] = [];
+    const imageOf = new Map<string, string>();
+    for (const s of doc.shapes) {
+      const m = s.img && /^data:image\/(png|jpe?g|gif);base64,(.+)$/s.exec(s.img);
+      if (!m) continue;
+      const ext = m[1] === "jpg" ? "jpeg" : m[1];
+      const file = `image${++pictures}.${ext}`;
+      const rid = `rId${media.length + 1}`;
+      put(`xl/media/${file}`, m[2], { base64: true });
+      exts.add(ext);
+      media.push([rid, "image", `../media/${file}`]);
+      imageOf.set(s.id, rid);
+    }
+
+    let id = 1;
+    const drawing =
+      `${XML}<xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="${REL}">` +
+      doc.shapes.map((s) => shapeXml(s, ++id, imageOf.get(s.id))).join("") +
+      doc.lines.map((l) => lineXml(l, ++id)).join("") +
+      `</xdr:wsDr>`;
+
+    put(`xl/worksheets/sheet${i}.xml`, sheetXml(doc, styles));
+    put(`xl/worksheets/_rels/sheet${i}.xml.rels`, rels([["rId1", "drawing", `../drawings/drawing${i}.xml`]]));
+    put(`xl/drawings/drawing${i}.xml`, drawing);
+    if (media.length) put(`xl/drawings/_rels/drawing${i}.xml.rels`, rels(media));
+
+    overrides.push(
+      `<Override PartName="/xl/worksheets/sheet${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
+        `<Override PartName="/xl/drawings/drawing${i}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>`,
+    );
+    sheetEntries.push(`<sheet name="${esc(names[n])}" sheetId="${i}" r:id="rId${i}"/>`);
+    workbookRels.push([`rId${i}`, "worksheet", `worksheets/sheet${i}.xml`]);
+  });
 
   put("[Content_Types].xml",
     `${XML}<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/>` +
     [...exts].map((e) => `<Default Extension="${e}" ContentType="image/${e}"/>`).join("") +
     `<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>` +
-    `<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>` +
-    `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>` +
-    `<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>`);
+    overrides.join("") +
+    `<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`);
   put("_rels/.rels", rels([["rId1", "officeDocument", "xl/workbook.xml"]]));
   put("xl/workbook.xml",
-    `${XML}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${REL}"><bookViews><workbookView/></bookViews><sheets><sheet name="المخطط" sheetId="1" r:id="rId1"/></sheets></workbook>`);
-  put("xl/_rels/workbook.xml.rels", rels([["rId1", "worksheet", "worksheets/sheet1.xml"], ["rId2", "styles", "styles.xml"]]));
+    `${XML}<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="${REL}"><bookViews><workbookView/></bookViews><sheets>${sheetEntries.join("")}</sheets></workbook>`);
+  put("xl/_rels/workbook.xml.rels", rels([...workbookRels, [`rId${sheets.length + 1}`, "styles", "styles.xml"]]));
   put("xl/styles.xml", styles.xml());
-  put("xl/worksheets/sheet1.xml", sheet);
-  put("xl/worksheets/_rels/sheet1.xml.rels", rels([["rId1", "drawing", "../drawings/drawing1.xml"]]));
-  put("xl/drawings/drawing1.xml", drawing);
-  if (media.length) put("xl/drawings/_rels/drawing1.xml.rels", rels(media));
 
   return zip.generateAsync({ type: "blob", compression: "DEFLATE", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
+
+/** Builds the file for one diagram. Runs entirely in the browser. */
+export const buildDiagramXlsx = (source: CopyDoc, color?: string | null) => buildWorkbook([{ name: "المخطط", doc: source, color }]);
 
 /** Builds the file and downloads it. Runs entirely in the browser. */
 export async function exportDiagramXlsx(doc: CopyDoc, title: string, color?: string | null) {
   const url = URL.createObjectURL(await buildDiagramXlsx(doc, color));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${(title || doc.title || "مخطط").replace(/[\\/:*?"<>|]+/g, " ").trim()}.xlsx`;
+  a.download = `${(title || doc.title || "مخطط").replace(/[\/:*?"<>|]+/g, " ").trim()}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
 }
