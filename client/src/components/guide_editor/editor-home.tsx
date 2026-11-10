@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router";
 import { useLanguage } from "@/components/settings/language-context";
+import { StatisticsCharts } from "@/components/dashboard/statistics-charts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { adminApi, guideApi, serviceTitle, type Dashboard, type LatestUpdate } from "@/lib/guide-api";
 import { editorPaths, type EditorContext } from "./editor-layout";
 
 /** Shown at /moh/editor: the dashboard for admins, a hint for staff before a service is chosen. */
 export function EditorHome() {
-  const { isAdmin } = useOutletContext<EditorContext>();
+  const { isAdmin, tree, treeError } = useOutletContext<EditorContext>();
   const { isArabic } = useLanguage();
-  if (isAdmin) return <AdminDashboard />;
+  if (isAdmin) return <AdminDashboard tree={tree} treeError={treeError} />;
   return (
     <div className="flex h-64 items-center justify-center rounded-xl border-2 border-dashed px-6 text-center text-muted-foreground">
       {isArabic ? "اختر خدمة من القائمة لتحرير محتواها." : "Choose a service from the list to edit its content."}
@@ -32,7 +33,7 @@ const actionText: Record<string, { ar: string; en: string }> = {
   "image.delete": { ar: "حذف صورة من الخدمة", en: "deleted a picture from" },
 };
 
-function AdminDashboard() {
+function AdminDashboard({ tree, treeError }: Pick<EditorContext, "tree" | "treeError">) {
   const { isArabic } = useLanguage();
   const t = (ar: string, en: string) => (isArabic ? ar : en);
   const [data, setData] = useState<Dashboard | undefined>();
@@ -43,7 +44,7 @@ function AdminDashboard() {
   }, []);
 
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <h1 className="text-xl font-semibold">{t("لوحة التحكم", "Dashboard")}</h1>
       {failed && <p className="text-sm text-destructive">{t("تعذر تحميل لوحة التحكم.", "Unable to load the dashboard.")}</p>}
       <div className="grid gap-4 sm:grid-cols-2">
@@ -60,6 +61,7 @@ function AdminDashboard() {
           <CardContent>{data ? <LatestUpdateView update={data.latestUpdate} /> : <span className="text-muted-foreground">…</span>}</CardContent>
         </Card>
       </div>
+      <StatisticsCharts divisions={tree} error={treeError} />
       <UpdateLog />
     </div>
   );

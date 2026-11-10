@@ -2,6 +2,7 @@ import { Link, useOutletContext } from "react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Card } from "@/components/ui/card";
+import { StatisticsCharts } from "@/components/dashboard/statistics-charts";
 import { DEFAULT_LABEL_COLOR, divisionTitle } from "@/lib/guide-api";
 import type { GuideContext } from "./guide-layout";
 import { guidePaths } from "./paths";
@@ -16,7 +17,8 @@ export function GuideHome() {
   return (
     <div className="mx-auto max-w-5xl">
       <section className="py-6 text-center md:py-10">
-        <span className="inline-flex items-center rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-2 rounded-full border border-[color-mix(in_oklch,var(--secondary-accent)_30%,var(--border))] bg-[color-mix(in_oklch,var(--secondary-accent)_8%,var(--card))] px-4 py-1.5 text-sm font-medium text-foreground">
+          <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-(--secondary-accent)" />
           {total != null
             ? isArabic
               ? `${total} خدمة في ${tree!.length} مجالات`
@@ -38,6 +40,10 @@ export function GuideHome() {
       {treeError && (
         <p className="text-center text-destructive">{isArabic ? "تعذر تحميل المجالات." : "Unable to load the categories."}</p>
       )}
+
+      <div className="mb-8">
+        <StatisticsCharts divisions={tree} error={Boolean(treeError)} />
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {!tree &&
