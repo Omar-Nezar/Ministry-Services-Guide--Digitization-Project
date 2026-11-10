@@ -17,6 +17,7 @@ export interface EditorContext {
   setTree: (update: (tree: EditorDivision[]) => EditorDivision[]) => void;
   reloadTree: () => Promise<void>;
   isAdmin: boolean;
+  treeError: boolean;
   /** The open page tells the layout it has unsaved changes, so leaving asks first */
   setDirty: (dirty: boolean) => void;
 }
@@ -77,7 +78,7 @@ export function EditorLayout() {
     setTreeState((current) => (current ? update(current) : current));
   }, []);
 
-  const context: EditorContext = { tree, setTree, reloadTree, isAdmin, setDirty };
+  const context: EditorContext = { tree, setTree, reloadTree, isAdmin, treeError: error, setDirty };
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     cn(
