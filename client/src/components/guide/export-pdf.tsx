@@ -159,10 +159,10 @@ const footer = (issueDate: string) => {
 const css = (issueDate: string) => `
 @page { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; ${footer(issueDate)} }
 @page diagram { size: ${PRINT_PAGE_SIZE}; margin: 0 0 14mm; ${footer(issueDate)} }
-@page a4-portrait { size: A4 portrait; margin: 0; }
-@page a4-landscape { size: A4 landscape; margin: 0; }
-@page a3-portrait { size: A3 portrait; margin: 0; }
-@page a3-landscape { size: A3 landscape; margin: 0; }
+@page a4-portrait { size: 210mm 297mm; margin: 0; }
+@page a4-landscape { size: 297mm 210mm; margin: 0; }
+@page a3-portrait { size: 297mm 420mm; margin: 0; }
+@page a3-landscape { size: 420mm 297mm; margin: 0; }
 html, body { background: #fff !important; background-image: none !important; color: #111; }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; }
