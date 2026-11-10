@@ -18,6 +18,7 @@ adminRouter.patch("/staff/:id", admin.updateStaff);
 adminRouter.delete("/staff/:id", admin.deleteStaff);
 
 // Pages added to the exported PDF (reading them is public: /guide/pdf-pages)
+adminRouter.put("/pdf-settings", pdf.updatePdfSettings);
 adminRouter.post("/pdf-pages", uploadImage, pdf.createPdfPage);
 adminRouter.put("/pdf-pages/order", pdf.reorderPdfPages);
 adminRouter.patch("/pdf-pages/:id", pdf.updatePdfPage);

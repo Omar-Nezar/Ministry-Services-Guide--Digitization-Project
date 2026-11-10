@@ -90,3 +90,16 @@ export async function reorderPdfPages(request: Request, response: Response): Pro
   await prisma.$transaction((ids as number[]).map((id, order) => prisma.pdfPage.updateMany({ where: { id }, data: { order } })));
   response.json({ ok: true });
 }
+
+export async function getPdfSettings(_request: Request, response: Response): Promise<void> {
+  const row = await prisma.pdfSettings.findUnique({ where: { id: 1 } });
+  response.json({ issueDate: row?.issueDate ?? "" });
+}
+
+export async function updatePdfSettings(request: Request, response: Response): Promise<void> {
+  const value = bodyOf(request)["issueDate"];
+  if (typeof value !== "string" || !/^(\d{4}-(0[1-9]|1[0-2]))?$/.test(value.trim())) return bad(response, "Issue date must be a month as YYYY-MM.");
+  const issueDate = value.trim();
+  await prisma.pdfSettings.upsert({ where: { id: 1 }, update: { issueDate }, create: { id: 1, issueDate } });
+  response.json({ issueDate });
+}

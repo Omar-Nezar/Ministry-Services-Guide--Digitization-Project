@@ -9,6 +9,7 @@ import {
     divisionTitle,
     flowchartTitle,
     guideApi,
+    issueMonthLabel,
     serviceTitle,
     uploadUrl,
     type PdfPage,
@@ -26,7 +27,8 @@ const SHEET = 1506;
 const PAD = 16;
 const GAP = 12;
 const COL_WIDTH = (SHEET - 2 - PAD * 2 - GAP) / 2;
-const COL_HEIGHT = 880;
+// Leaves room above a service's first sheet for the category banner and a title of a few lines
+const COL_HEIGHT = 840;
 const PRINT_PAGE_SIZE = "420mm 297mm";
 const PRINT_TITLE = "Ministry Services Catalogue";
 
@@ -147,8 +149,16 @@ async function loadService(id: number) {
     return { detail, diagrams: filteredDiagrams };
 }
 
-const CSS = `
-@page { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; @bottom-center { content: counter(page); font: 10pt "Segoe UI", Tahoma, Arial, sans-serif; color: #666; } }
+/** Footer of the pages that have a margin: page number in the middle, issue date at the end of the line */
+const footer = (issueDate: string) => {
+    const font = 'font: 10pt "Segoe UI", Tahoma, Arial, sans-serif; color: #666;';
+    const date = `دليل الخدمات، ${issueDate}`.replace(/[\\"\r\n]/g, " ");
+    return `@bottom-center { content: counter(page); ${font} } @bottom-right { content: "${date}"; ${font} }`;
+};
+
+const css = (issueDate: string) => `
+@page { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; ${footer(issueDate)} }
+@page diagram { size: ${PRINT_PAGE_SIZE}; margin: 0 0 14mm; ${footer(issueDate)} }
 @page a4-portrait { size: A4 portrait; margin: 0; }
 @page a4-landscape { size: A4 landscape; margin: 0; }
 @page a3-portrait { size: A3 portrait; margin: 0; }
@@ -167,7 +177,7 @@ body { margin: 0; }
 .toc a { color: inherit; text-decoration: none; }
 
 .division { break-before: page; }
-.division > h1 { margin: 0 0 20px; padding: 10px 20px; color: #fff; font-size: 30px; border-radius: 8px; }
+.division > h1 { margin: 0 0 12px; padding: 6px 20px; color: #fff; font-size: 26px; line-height: 1.4; border-radius: 8px; }
 
 .custom-page { position: relative; break-before: page; break-after: page; overflow: hidden; background: #fff; }
 .custom-page img { display: block; width: 100%; height: 100%; }
@@ -178,12 +188,14 @@ body { margin: 0; }
 .custom-page.a3-landscape { page: a3-landscape; width: 420mm; height: 297mm; }
 
 .service + .service { break-before: page; }
-.service > h2 { margin: 0 0 14px; font-size: 26px; line-height: 1.5; break-after: avoid; }
+.service > h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.4; break-inside: avoid; break-after: avoid; }
+.service > h2.long { font-size: 20px; }
+.division > h1 { break-inside: avoid; break-after: avoid; }
 .flow-page { display: flex; gap: ${GAP}px; width: ${SHEET}px; padding: ${PAD}px; border: 1px solid var(--border, #ddd); border-radius: 8px; break-inside: avoid; }
 .flow-page + .flow-page { break-before: page; }
 .flow-page > .slot { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 6px; }
 .sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; }
-.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; break-after: page; page: a3-landscape; width: 420mm; height: 297mm; }
+.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; break-after: page; page: diagram; width: 420mm; height: 283mm; }
 .diagram-page h4 { flex: none; margin: 0; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; }
 .diagram-page svg { display: block; flex: 1 1 0; min-height: 0; width: 100%; background: #fff; }
 .figure { width: ${SHEET}px; break-inside: avoid; margin: 0 0 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
@@ -218,7 +230,7 @@ function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): 
             )
             .join("")
         : "";
-    return `<section class="service" id="s${detail.id}"><h2 style="color:${esc(detail.serviceDivision.color ?? DEFAULT_LABEL_COLOR)}">${esc(serviceTitle(detail.name))}</h2>${sheets}${flow}${pictures}</section>`;
+    return `<section class="service" id="s${detail.id}"><h2${serviceTitle(detail.name).length > 80 ? ' class="long"' : ""} style="color:${esc(detail.serviceDivision.color ?? DEFAULT_LABEL_COLOR)}">${esc(serviceTitle(detail.name))}</h2>${sheets}${flow}${pictures}</section>`;
 }
 
 /** The pictures an admin added, as full pages of their own size (A4 or A3). */
@@ -244,6 +256,7 @@ function customPagesHtml(pages: PdfPage[]): string {
 function documentHtml(
     data: Loaded,
     custom: PdfPage[],
+    issueDate: string,
 ): string {
     const customAt = (slot: PdfPage["slot"], divisionId?: number) =>
         customPagesHtml(custom.filter((p) => p.slot === slot && (divisionId === undefined || p.serviceDivisionId === divisionId)));
@@ -275,7 +288,7 @@ function documentHtml(
 
     const fullHtml = (
         `<!doctype html><html lang="ar" dir="rtl" class="${esc(root.className.replace(/\bdark\b/g, ""))}" style="${esc(root.getAttribute("style") ?? "")}">` +
-        `<head><meta charset="utf-8"><title>${PRINT_TITLE}</title>${styles}<style>${CSS}</style></head><body>` +
+        `<head><meta charset="utf-8"><title>${PRINT_TITLE}</title>${styles}<style>${css(issueDate)}</style></head><body>` +
         customAt("start") +
         `<div class="cover"><h1>دليل الخدمات</h1><p>وزارة الإسكان والتخطيط العمراني</p></div>` +
         `<div class="toc"><h2>الفهرس</h2><div class="cols">${toc}</div></div>${body}` +
@@ -293,6 +306,8 @@ export async function exportGuidePdf(onProgress?: (done: number, total: number) 
         const tree = await guideApi.tree();
 
         const customPages = await guideApi.pdfPages();
+        const savedDate = await guideApi.pdfSettings().then((r) => r.issueDate).catch(() => "");
+        const issueDate = issueMonthLabel(savedDate);
 
         const ids = tree.flatMap((d) => d.services.map((s) => s.id));
 
@@ -318,6 +333,7 @@ export async function exportGuidePdf(onProgress?: (done: number, total: number) 
         const html = documentHtml(
             data,
             customPages,
+            issueDate,
         );
 
         if (frame) {

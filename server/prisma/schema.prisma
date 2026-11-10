@@ -239,3 +239,12 @@ model PdfPage {
 
   @@index([slot, serviceDivisionId])
 }
+
+/// Single row (id = 1): settings of the exported PDF
+model PdfSettings {
+  id        Int    @id
+  /// Shown in the footer as "تاريخ الإصدار"; free text, empty = today's date
+  issueDate String @default("") @db.NVarChar(60)
+
+  @@map("pdf_settings")
+}

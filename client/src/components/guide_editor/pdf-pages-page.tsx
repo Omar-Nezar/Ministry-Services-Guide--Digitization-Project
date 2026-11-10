@@ -3,8 +3,9 @@ import { Navigate, useOutletContext } from "react-router";
 import { ArrowDown, ArrowUp, Plus, RotateCcw, RotateCw, Trash2 } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
+import { MonthPicker } from "@/components/ui/month-picker";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { adminApi, apiErrorMessage, divisionTitle, guideApi, uploadUrl, type PdfPage } from "@/lib/guide-api";
+import { adminApi, apiErrorMessage, issueMonthLabel, divisionTitle, guideApi, uploadUrl, type PdfPage } from "@/lib/guide-api";
 import { editorPaths, type EditorContext } from "./editor-layout";
 
 type Where = { slot: PdfPage["slot"]; serviceDivisionId?: number };
@@ -19,10 +20,26 @@ export function PdfPagesPage() {
   const [pages, setPages] = useState<PdfPage[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [progress, setProgress] = useState("");
+  const [issueDate, setIssueDate] = useState("");
+  const [savedDate, setSavedDate] = useState("");
 
   useEffect(() => {
     void guideApi.pdfPages().then(setPages);
+    void guideApi.pdfSettings().then((r) => {
+      setIssueDate(r.issueDate);
+      setSavedDate(r.issueDate);
+    });
   }, []);
+
+  const saveDate = async () => {
+    try {
+      const saved = await adminApi.savePdfSettings(issueDate);
+      setIssueDate(saved.issueDate);
+      setSavedDate(saved.issueDate);
+    } catch (e) {
+      alert(apiErrorMessage(e, t("تعذر الحفظ.", "Unable to save.")));
+    }
+  };
 
   if (!isAdmin) return <Navigate to={editorPaths.home} replace />;
 
@@ -171,6 +188,19 @@ export function PdfPagesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <section className="flex flex-col gap-2 border-b pb-4">
+            <h3 className="font-medium">{t("تاريخ الإصدار", "Issue date")}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t("الشهر والسنة، ويظهران أسفل صفحات الملف: ", "Month and year, shown in the footer of the PDF pages: ")}
+              <bdi className="font-medium text-foreground">{`دليل الخدمات، ${issueMonthLabel(issueDate)}`}</bdi>
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <MonthPicker value={issueDate} onChange={setIssueDate} label={t("اختر الشهر والسنة", "Pick month and year")} />
+              <Button type="button" size="sm" variant="outline" disabled={issueDate === savedDate} onClick={() => void saveDate()}>
+                {t("حفظ", "Save")}
+              </Button>
+            </div>
+          </section>
           {slot({ slot: "start" }, t("بداية الدليل (قبل الغلاف)", "Start of the guide (before the cover)"))}
           {(tree ?? []).flatMap((d) => [
             slot({ slot: "before", serviceDivisionId: d.id }, t(`قبل: ${divisionTitle(d, true)}`, `Before: ${divisionTitle(d, false)}`)),
