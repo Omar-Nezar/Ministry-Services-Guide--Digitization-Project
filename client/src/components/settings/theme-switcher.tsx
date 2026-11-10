@@ -2,10 +2,10 @@ import { useState } from "react";
 import { ChevronDown, Moon, Palette, Sun } from "lucide-react";
 import { useDisplaySettings } from "@/components/settings/use-display-settings";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type {
   PrimaryColor,
   SecondaryColor,
@@ -95,12 +95,11 @@ export function ThemeSwitcher({
   const [open, setOpen] = useState(false);
 
   return (
-    <Collapsible
+    <Popover
       open={open}
       onOpenChange={setOpen}
-      className="group relative"
     >
-      <CollapsibleTrigger
+      <PopoverTrigger
         type="button"
         className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] px-3 text-sm font-medium text-(--secondary-accent-foreground) outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-(--secondary-accent-foreground)"
         aria-label={isArabic ? "إعدادات المظهر" : "Appearance settings"}
@@ -113,10 +112,12 @@ export function ThemeSwitcher({
           aria-hidden="true"
           className={`size-3.5 opacity-75 transition-transform ${open ? "rotate-180" : ""}`}
         />
-      </CollapsibleTrigger>
+      </PopoverTrigger>
 
-      <CollapsibleContent
-        className="absolute inset-e-0 top-11 z-30 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-xl"
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-xl"
         aria-label={isArabic ? "إعدادات المظهر" : "Appearance settings"}
       >
         <div className="mb-5">
@@ -203,7 +204,7 @@ export function ThemeSwitcher({
             </Button>
           </div>
         </fieldset>
-      </CollapsibleContent>
-    </Collapsible>
+      </PopoverContent>
+    </Popover>
   );
 }
