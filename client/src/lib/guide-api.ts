@@ -79,6 +79,15 @@ export interface LabelColor {
   color: string;
 }
 
+export const ARABIC_MONTHS = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+
+/** "2026-03" (or today when empty) as "مارس 2026" */
+export function issueMonthLabel(value: string, today = new Date()): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(value);
+  const [year, month] = m ? [Number(m[1]), Number(m[2]) - 1] : [today.getFullYear(), today.getMonth()];
+  return `${ARABIC_MONTHS[month] ?? ""} ${year}`;
+}
+
 /** A picture page of the exported PDF, added by an admin. */
 export interface PdfPage {
   id: number;
@@ -141,6 +150,7 @@ export const guideApi = {
   service: (id: number, signal?: AbortSignal) => get<ServiceDetail>(`/guide/services/${id}`, signal),
   flowchart: (id: number, signal?: AbortSignal) => get<unknown>(`/guide/flowcharts/${id}`, signal),
   pdfPages: (signal?: AbortSignal) => get<PdfPage[]>("/guide/pdf-pages", signal),
+  pdfSettings: (signal?: AbortSignal) => get<{ issueDate: string }>("/guide/pdf-settings", signal),
 };
 
 export const editorApi = {
@@ -205,6 +215,7 @@ export const adminApi = {
   },
   updatePdfPage: (id: number, data: Partial<Pick<PdfPage, "size" | "orientation" | "imageFit" | "rotation">>) =>
     api.patch<PdfPage>(`/admin/pdf-pages/${id}`, data).then((r) => r.data),
+  savePdfSettings: (issueDate: string) => api.put<{ issueDate: string }>("/admin/pdf-settings", { issueDate }).then((r) => r.data),
   deletePdfPage: (id: number) => api.delete(`/admin/pdf-pages/${id}`),
   reorderPdfPages: (ids: number[]) => api.put("/admin/pdf-pages/order", ids),
 };
