@@ -159,63 +159,50 @@ const footer = (issueDate: string) => {
 const css = (issueDate: string) => `
 @page { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; ${footer(issueDate)} }
 @page diagram { size: ${PRINT_PAGE_SIZE}; margin: 0 0 14mm; ${footer(issueDate)} }
-@page a4-portrait { size: A4 portrait; margin: 0; }
-@page a4-landscape { size: A4 landscape; margin: 0; }
-@page a3-portrait { size: A3 portrait; margin: 0; }
-@page a3-landscape { size: A3 landscape; margin: 0; }
-
+@page a4-portrait { size: 210mm 297mm; margin: 0; }
+@page a4-landscape { size: 297mm 210mm; margin: 0; }
+@page a3-portrait { size: 297mm 420mm; margin: 0; }
+@page a3-landscape { size: 420mm 297mm; margin: 0; }
 html, body { background: #fff !important; background-image: none !important; color: #111; }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; }
-
-/* Cover & TOC */
-.cover { height: 255mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 24px; break-after: page; page-break-after: always; }
+.cover { height: 255mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 24px; break-after: page; }
 .cover h1 { font-size: 64px; margin: 0; color: ${DEFAULT_LABEL_COLOR}; }
 .cover p { font-size: 28px; margin: 0; color: #555; }
-
-.toc { break-after: page; page-break-after: always; }
+.toc { break-after: page; }
 .toc h2 { color: ${DEFAULT_LABEL_COLOR}; font-size: 32px; }
 .toc .cols { column-count: 3; column-gap: 40px; }
-.toc h3 { margin: 18px 0 4px; font-size: 18px; break-after: avoid; page-break-after: avoid; }
+.toc h3 { margin: 18px 0 4px; font-size: 18px; break-after: avoid; }
 .toc ul { margin: 0; padding-inline-start: 22px; font-size: 14px; line-height: 1.7; }
 .toc a { color: inherit; text-decoration: none; }
 
-/* Divisions & Services */
-.division { break-before: page; page-break-before: always; }
-.division > h1 { margin: 0 0 12px; padding: 6px 20px; color: #fff; font-size: 26px; line-height: 1.4; border-radius: 8px; break-inside: avoid; break-after: avoid; }
+.division { break-before: page; }
+.division > h1 { margin: 0 0 12px; padding: 6px 20px; color: #fff; font-size: 26px; line-height: 1.4; border-radius: 8px; }
 
-.service { break-inside: avoid; }
-.service + .service { break-before: page; page-break-before: always; }
-.service > h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.4; break-inside: avoid; break-after: avoid; }
-.service > h2.long { font-size: 20px; }
-
-/* Flow Pages */
-.flow-page { display: flex; gap: ${GAP}px; width: ${SHEET}px; padding: ${PAD}px; border: 1px solid var(--border, #ddd); border-radius: 8px; break-inside: avoid; }
-.flow-page + .flow-page { break-before: page; page-break-before: always; }
-.flow-page > .slot { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 6px; }
-.sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; }
-
-/* Diagram Pages */
-.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; page-break-before: always; page: diagram; width: 420mm; height: 100vh; }
-.diagram-page h4 { flex: none; margin: 0; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; }
-.diagram-page svg { display: block; flex: 1 1 0; min-height: 0; width: 100%; background: #fff; }
-
-/* Figures */
-.figure { width: ${SHEET}px; break-inside: avoid; margin: 0 0 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
-.figure h4 { margin: 0 0 8px; font-size: 16px; color: ${DEFAULT_LABEL_COLOR}; }
-.figure svg { display: block; width: 100%; height: auto; max-height: 800px; background: #fff; }
-.figure img { display: block; max-width: 100%; max-height: 800px; margin: 0 auto; object-fit: contain; }
-.figure figcaption { text-align: center; font-size: 14px; color: #555; margin-top: 6px; }
-
-/* Custom Pages - Only apply break-before if not the very first element */
-.custom-page { position: relative; overflow: hidden; background: #fff; }
-.custom-page:not(:first-child) { break-before: page; page-break-before: always; }
+.custom-page { position: relative; break-before: page; break-after: page; overflow: hidden; background: #fff; }
 .custom-page img { display: block; width: 100%; height: 100%; }
 .custom-page img.turned { position: absolute; left: 50%; top: 50%; }
 .custom-page.a4-portrait { page: a4-portrait; width: 210mm; height: 297mm; }
 .custom-page.a4-landscape { page: a4-landscape; width: 297mm; height: 210mm; }
 .custom-page.a3-portrait { page: a3-portrait; width: 297mm; height: 420mm; }
 .custom-page.a3-landscape { page: a3-landscape; width: 420mm; height: 297mm; }
+
+.service + .service { break-before: page; }
+.service > h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.4; break-inside: avoid; break-after: avoid; }
+.service > h2.long { font-size: 20px; }
+.division > h1 { break-inside: avoid; break-after: avoid; }
+.flow-page { display: flex; gap: ${GAP}px; width: ${SHEET}px; padding: ${PAD}px; border: 1px solid var(--border, #ddd); border-radius: 8px; break-inside: avoid; }
+.flow-page + .flow-page { break-before: page; }
+.flow-page > .slot { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 6px; }
+.sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; }
+.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; break-after: page; page: diagram; width: 420mm; height: 283mm; }
+.diagram-page h4 { flex: none; margin: 0; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; }
+.diagram-page svg { display: block; flex: 1 1 0; min-height: 0; width: 100%; background: #fff; }
+.figure { width: ${SHEET}px; break-inside: avoid; margin: 0 0 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
+.figure h4 { margin: 0 0 8px; font-size: 16px; color: ${DEFAULT_LABEL_COLOR}; }
+.figure svg { display: block; width: 100%; height: auto; max-height: 800px; background: #fff; }
+.figure img { display: block; max-width: 100%; max-height: 800px; margin: 0 auto; object-fit: contain; }
+.figure figcaption { text-align: center; font-size: 14px; color: #555; margin-top: 6px; }
 `;
 
 function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): string {
@@ -258,8 +245,8 @@ function customPagesHtml(pages: PdfPage[]): string {
                 (p.rotation === 0
                     ? ""
                     : quarter
-                        ? `;width:${h}mm;height:${w}mm;transform:translate(-50%,-50%) rotate(${p.rotation}deg)`
-                        : `;transform:rotate(180deg)`);
+                      ? `;width:${h}mm;height:${w}mm;transform:translate(-50%,-50%) rotate(${p.rotation}deg)`
+                      : `;transform:rotate(180deg)`);
             const turned = quarter ? ' class="turned"' : "";
             return `<div class="custom-page ${p.size.toLowerCase()}-${p.orientation}"><img${turned} src="${esc(uploadUrl(p.imagePath))}" alt="" style="${style}"></div>`;
         })
