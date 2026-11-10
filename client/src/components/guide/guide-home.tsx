@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Card } from "@/components/ui/card";
 import { StatisticsCharts } from "@/components/dashboard/statistics-charts";
-import { DEFAULT_LABEL_COLOR, divisionTitle } from "@/lib/guide-api";
+import { DEFAULT_LABEL_COLOR, divisionTitle, unitsOf } from "@/lib/guide-api";
 import type { GuideContext } from "./guide-layout";
 import { guidePaths } from "./paths";
 
@@ -11,7 +11,7 @@ import { guidePaths } from "./paths";
 export function GuideHome() {
   const { isArabic } = useLanguage();
   const { tree, treeError } = useOutletContext<GuideContext>();
-  const total = tree?.reduce((n, d) => n + d.services.length, 0);
+  const total = tree?.reduce((n, d) => n + unitsOf(d.services), 0);
   const Arrow = isArabic ? ArrowLeft : ArrowRight;
 
   return (
@@ -61,7 +61,7 @@ export function GuideHome() {
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="text-lg font-semibold">{divisionTitle(d, isArabic)}</h2>
                   <span className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs text-muted-foreground tabular-nums">
-                    {isArabic ? `${d.services.length} خدمة` : `${d.services.length} services`}
+                    {isArabic ? `${unitsOf(d.services)} خدمة` : `${unitsOf(d.services)} services`}
                   </span>
                 </div>
                 {isArabic && d.nameAr && d.nameAr !== d.name && (

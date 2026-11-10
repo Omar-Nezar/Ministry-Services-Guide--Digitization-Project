@@ -8,7 +8,7 @@ import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tip } from "@/components/ui/tip";
-import { DEFAULT_LABEL_COLOR, apiErrorMessage, divisionTitle, editorApi, serviceTitle, type EditorDivision } from "@/lib/guide-api";
+import { DEFAULT_LABEL_COLOR, apiErrorMessage, divisionTitle, editorApi, serviceTitle, unitsOf, type EditorDivision } from "@/lib/guide-api";
 import { matches } from "@/lib/guide-search";
 import { cn } from "@/lib/utils";
 import { editorPaths } from "./editor-layout";
@@ -266,7 +266,7 @@ export function EditorTree({ tree, error, setTree, reloadTree, isAdmin, onNaviga
                           className={cn("size-4 shrink-0 text-muted-foreground transition-transform", !searching && !open.has(d.id) && "ltr:-rotate-90 rtl:rotate-90")}
                         />
                         <span className="truncate">{divisionTitle(d, isArabic)}</span>
-                        <span className="ms-auto text-xs font-normal text-muted-foreground tabular-nums">{d.services.length}</span>
+                        <span className="ms-auto text-xs font-normal text-muted-foreground tabular-nums">{unitsOf(d.services)}</span>
                       </button>
                       {d.editable && (
                         <Tip label={t("إضافة خدمة", "Add a service")}>

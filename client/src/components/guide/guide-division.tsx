@@ -2,7 +2,7 @@ import { Link, useParams } from "react-router";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Card } from "@/components/ui/card";
-import { DEFAULT_LABEL_COLOR, divisionTitle, guideApi, serviceTitle } from "@/lib/guide-api";
+import { DEFAULT_LABEL_COLOR, divisionTitle, guideApi, serviceParts, serviceTitle } from "@/lib/guide-api";
 import { useFetch } from "@/lib/use-fetch";
 import { GuideBreadcrumbs } from "./guide-breadcrumbs";
 import { guidePaths } from "./paths";
@@ -17,6 +17,21 @@ export function GuideDivision() {
   if (error) return <p className="text-destructive">{isArabic ? "تعذر تحميل المجال." : "Unable to load this category."}</p>;
   if (!data || (loading && data.id !== Number(divisionId))) return <PageSkeleton />;
 
+  // A service whose name lists parts in brackets ("service(a - b - c)") gets one card per part, under the service's name,
+  // so the number in the header is the number of cards.
+  const cards = data.services.flatMap((s) => {
+    const { base, parts } = serviceParts(s.name);
+    const split = parts.length > 1;
+    return parts.map((part, j) => ({
+      key: `${s.id}-${j}`,
+      serviceId: s.id,
+      title: split ? part : serviceTitle(s.name),
+      group: split ? base : null,
+      description: s.description,
+      duration: s.duration,
+    }));
+  });
+
   return (
     <div className="mx-auto max-w-6xl">
       <GuideBreadcrumbs items={[{ label: divisionTitle(data, isArabic) }]} />
@@ -26,16 +41,16 @@ export function GuideDivision() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{divisionTitle(data, isArabic)}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {isArabic ? `${data.services.length} خدمة` : `${data.services.length} services`}
+            {isArabic ? `${cards.length} خدمة` : `${cards.length} services`}
           </p>
         </div>
       </header>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {data.services.map((s, i) => (
+        {cards.map((s, i) => (
           <Link
-            key={s.id}
-            to={guidePaths.service(s.id)}
+            key={s.key}
+            to={guidePaths.service(s.serviceId)}
             className="group rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
           >
             <Card className="h-full gap-0 p-5 transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lg group-hover:shadow-primary/5">
@@ -43,7 +58,10 @@ export function GuideDivision() {
                 <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-secondary text-xs font-semibold text-secondary-foreground tabular-nums">
                   {i + 1}
                 </span>
-                <h2 className="line-clamp-3 font-semibold leading-relaxed">{serviceTitle(s.name)}</h2>
+                <div className="min-w-0">
+                  {s.group && <p className="line-clamp-1 text-xs text-muted-foreground">{s.group}</p>}
+                  <h2 className="line-clamp-3 font-semibold leading-relaxed">{s.title}</h2>
+                </div>
               </div>
               {s.description && (
                 <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{s.description}</p>

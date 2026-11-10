@@ -236,6 +236,20 @@ export const divisionTitle = (d: { name: string; nameAr: string | null }, isArab
 /** Service names from the Word files sometimes end with ":" */
 export const serviceTitle = (name: string) => name.replace(/\s*:\s*$/, "");
 
+/**
+ * The parts of a service name counted as services. "service(ser1 - ser2 - ser3)" has three parts, split by "-"
+ * inside the brackets, and counts as 3. Any other name has one part, itself. Keep in step with serviceUnits on the server.
+ */
+export const serviceParts = (name: string): { base: string; parts: string[] } => {
+  const match = /\(([^()]*)\)/.exec(name);
+  const parts = match ? match[1].split(/[-–—]/).map((p) => p.trim()).filter(Boolean) : [];
+  if (parts.length < 2) return { base: name, parts: [name] };
+  return { base: name.slice(0, match!.index).trim() || name, parts };
+};
+
+/** How many services a list of services counts as (see serviceParts). */
+export const unitsOf = (services: { name: string }[]) => services.reduce((n, s) => n + serviceParts(s.name).parts.length, 0);
+
 /** A flowchart's title is its Excel sheet name: trim it, and drop a ")" left without its "(". */
 export const flowchartTitle = (f: { title: string | null }, fallback: string) => {
   const t = f.title?.trim() ?? "";

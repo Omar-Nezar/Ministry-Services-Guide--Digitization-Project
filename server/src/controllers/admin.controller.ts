@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { randomBytes } from "node:crypto";
 import { prisma } from "@db";
 import { hashPassword } from "@/utils/password.js";
-import { HIDDEN_DIVISIONS } from "@/utils/guide.js";
+import { HIDDEN_DIVISIONS, serviceUnits } from "@/utils/guide.js";
 import type { AuthenticatedRequest } from "@/middlewares/auth.middleware.js";
 
 // The admin API (see admin.routes.ts): the dashboard and the staff accounts. Admins only.
@@ -20,13 +20,13 @@ const notFound = (response: Response) => void response.status(404).json({ error:
 // ---------------------------------------------------------------------------
 
 export async function getDashboard(_request: Request, response: Response): Promise<void> {
-  const [totalServices, latest] = await Promise.all([
-    prisma.service.count(),
+  const [services, latest] = await Promise.all([
+    prisma.service.findMany({ select: { name: true } }),
     prisma.serviceAudit.findFirst({ orderBy: [{ createdAt: "desc" }, { id: "desc" }] }),
   ]);
 
   response.json({
-    totalServices,
+    totalServices: services.reduce((total, service) => total + serviceUnits(service.name), 0),
     latestUpdate: latest && {
       action: latest.action,
       serviceId: latest.serviceId,

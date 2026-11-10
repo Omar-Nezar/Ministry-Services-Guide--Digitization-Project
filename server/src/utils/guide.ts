@@ -5,6 +5,17 @@ export const HIDDEN_DIVISIONS = ["IT"];
 
 export const byOrder =[{ order: "asc" as const }, { id: "asc" as const }];
 
+/**
+ * How many services a service name counts as. Parts written in brackets and split by "-" count one each:
+ * "service(ser1 - ser2 - ser3)" is 3. Any other name is 1. Keep in step with serviceParts in client/src/lib/guide-api.ts.
+ */
+export function serviceUnits(name: string): number {
+  const match = /\(([^()]*)\)/.exec(name);
+  const inside = match?.[1] ?? "";
+  const parts = inside.split(/[-–—]/).map((p) => p.trim()).filter(Boolean).length;
+  return parts >= 2 ? parts : 1;
+}
+
 /** Plain text from html, for the short previews on the cards. */
 export function excerpt(html: string | undefined, max = 160): string {
   if (!html) return "";

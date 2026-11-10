@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useParams } from "react-router";
 import { ChevronDown, Search, X } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
-import { DEFAULT_LABEL_COLOR, divisionTitle, serviceTitle, type TreeDivision } from "@/lib/guide-api";
+import { DEFAULT_LABEL_COLOR, divisionTitle, serviceTitle, type TreeDivision, unitsOf } from "@/lib/guide-api";
 import { matches } from "@/lib/guide-search";
 import { cn } from "@/lib/utils";
 import { guidePaths } from "./paths";
@@ -58,7 +58,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
       )
       .filter((d) => d.services.length > 0);
   }, [tree, query, searching]);
-  const found = visible.reduce((n, d) => n + d.services.length, 0);
+  const found = visible.reduce((n, d) => n + unitsOf(d.services), 0);
 
   const toggle = (id: number) =>
     setOpen((o) => {
@@ -138,7 +138,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
                       style={{ background: d.color ?? DEFAULT_LABEL_COLOR }}
                     />
                     <span className="truncate">{divisionTitle(d, isArabic)}</span>
-                    <span className="ms-auto text-xs font-normal text-muted-foreground tabular-nums">{d.services.length}</span>
+                    <span className="ms-auto text-xs font-normal text-muted-foreground tabular-nums">{unitsOf(d.services)}</span>
                   </NavLink>
                   <button
                     type="button"

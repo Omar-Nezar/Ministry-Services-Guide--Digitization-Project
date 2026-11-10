@@ -20,7 +20,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-import { divisionTitle, type TreeDivision } from "@/lib/guide-api";
+import { divisionTitle, type TreeDivision, unitsOf } from "@/lib/guide-api";
 
 interface StatisticsChartsProps {
   divisions: readonly TreeDivision[] | undefined;
@@ -43,7 +43,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
       .map((division, index) => ({
         key: `division-${division.id}`,
         name: divisionTitle(division, isArabic),
-        count: division.services.length,
+        count: unitsOf(division.services),
         color: division.color ?? palette[index % palette.length],
       }))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
