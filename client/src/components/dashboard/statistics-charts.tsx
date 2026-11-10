@@ -5,7 +5,6 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
   Pie,
   PieChart,
   XAxis,
@@ -52,7 +51,11 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
     const topDivisions = sorted.slice(0, 6);
     const remaining = sorted.slice(6);
     const pieData = [
-      ...topDivisions.map((division) => ({ ...division, divisionKey: division.key })),
+      ...topDivisions.map((division) => ({
+        ...division,
+        divisionKey: division.key,
+        fill: `var(--color-${division.key})`,
+      })),
       ...(remaining.length
         ? [
             {
@@ -61,6 +64,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
               name: translate("مجالات أخرى", "Other divisions"),
               count: remaining.reduce((total, division) => total + division.count, 0),
               color: "var(--chart-5)",
+              fill: "var(--color-other-divisions)",
             },
           ]
         : []),
@@ -149,14 +153,16 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={statistics.pieConfig} className="h-[280px] w-full aspect-auto">
+              <ChartContainer config={statistics.pieConfig} className="h-70 w-full aspect-auto">
                 <PieChart accessibilityLayer>
                   <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="divisionKey" />} />
-                  <Pie data={statistics.pieData} dataKey="count" nameKey="name" innerRadius={48} outerRadius={84}>
-                    {statistics.pieData.map((division) => (
-                      <Cell key={division.key} fill={`var(--color-${division.key})`} />
-                    ))}
-                  </Pie>
+                  <Pie
+                    data={statistics.pieData}
+                    dataKey="count"
+                    nameKey="name"
+                    innerRadius={48}
+                    outerRadius={84}
+                  />
                   <ChartLegend
                     content={<ChartLegendContent nameKey="divisionKey" className="flex-wrap gap-x-3 gap-y-2" />}
                   />
@@ -173,7 +179,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={statistics.barConfig} className="h-[280px] w-full aspect-auto">
+              <ChartContainer config={statistics.barConfig} className="h-70 w-full aspect-auto">
                 <BarChart
                   accessibilityLayer
                   data={statistics.sorted.slice(0, 8).map((division) => ({
@@ -215,7 +221,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={statistics.volumeConfig} className="h-[280px] w-full aspect-auto">
+              <ChartContainer config={statistics.volumeConfig} className="h-70 w-full aspect-auto">
                 <BarChart accessibilityLayer data={statistics.volumeData} margin={{ left: 0, right: 8 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis dataKey="label" tickLine={false} axisLine={false} />
@@ -245,7 +251,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer config={statistics.coverageConfig} className="h-[280px] w-full aspect-auto">
+              <ChartContainer config={statistics.coverageConfig} className="h-70 w-full aspect-auto">
                 <AreaChart accessibilityLayer data={statistics.coverageData} margin={{ left: 0, right: 12 }}>
                   <CartesianGrid vertical={false} />
                   <XAxis
