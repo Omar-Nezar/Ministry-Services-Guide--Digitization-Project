@@ -34,12 +34,14 @@ const PRINT_TITLE = "Ministry Services Catalogue";
 
 // Room for a drawing on an A3 landscape page (page minus padding and the title line), in CSS px
 const DIAGRAM_AREA = { w: 1527, h: 1017 };
+// The same room on a diagram sheet that is only as big as the default sheet's content area (non-Chromium browsers, see CSS_NON_CHROMIUM)
+const DIAGRAM_AREA_OTHER = { w: 1451, h: 930 };
 /** Below this a whole diagram is unreadable on one page, so it is cut into several pages */
 const SPLIT_BELOW = 0.3;
 const SPLIT_TARGET = 0.45;
 const MAX_PARTS = 8;
 
-const fitScale = (w: number, h: number) => Math.min(DIAGRAM_AREA.w / w, DIAGRAM_AREA.h / h);
+const fitScale = (w: number, h: number, area: { w: number; h: number }) => Math.min(area.w / w, area.h / h);
 
 type Box = { x: number; y: number; w: number; h: number };
 const blankFill = (fill?: string) => !fill || fill === "none" || /^#f{3}(f{3})?$/i.test(fill);
@@ -84,13 +86,13 @@ function drawingBox(raw: CopyDoc, color: string | null): Box {
  * The viewBox of each page one diagram takes. Every page is A3 landscape like the rest of the guide; a very long
  * diagram is cut into a few overlapping slices along its long side, in reading order (an Arabic sheet starts at its right edge).
  */
-function planDiagram({ x: x0, y: y0, w, h }: Box, rtl: boolean): string[] {
-    if (fitScale(w, h) >= SPLIT_BELOW) return [`${x0} ${y0} ${w} ${h}`];
+function planDiagram({ x: x0, y: y0, w, h }: Box, rtl: boolean, area: { w: number; h: number }): string[] {
+    if (fitScale(w, h, area) >= SPLIT_BELOW) return [`${x0} ${y0} ${w} ${h}`];
 
     const wide = w >= h;
     const length = wide ? w : h;
     let count = 2;
-    while (count < MAX_PARTS && fitScale(wide ? length / count : w, wide ? h : length / count) < SPLIT_TARGET) count++;
+    while (count < MAX_PARTS && fitScale(wide ? length / count : w, wide ? h : length / count, area) < SPLIT_TARGET) count++;
 
     const step = length / count;
     const overlap = step * 0.04;
@@ -120,7 +122,7 @@ async function pool<T, R>(items: T[], limit: number, task: (item: T) => Promise<
     return out;
 }
 
-async function loadService(id: number) {
+async function loadService(id: number, area: { w: number; h: number }) {
     const detail = await guideApi.service(id);
 
     const diagrams = await Promise.all(
@@ -141,7 +143,7 @@ async function loadService(id: number) {
                     <Drawing doc={doc} color={color} />
                 </svg>,
             );
-            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg, viewBox, parts: planDiagram(box, doc.rtl) };
+            return { title: flowchartTitle(f, "مخطط سير الإجراء"), svg, viewBox, parts: planDiagram(box, doc.rtl, area) };
         }),
     );
 
@@ -205,6 +207,33 @@ body { margin: 0; }
 .figure figcaption { text-align: center; font-size: 14px; color: #555; margin-top: 6px; }
 `;
 
+/**
+ * Blink-based browsers (Chrome, Edge, Opera, Brave, Chromium). The shared CSS above is tuned on them and must stay as it is.
+ * iOS browsers are excluded even when they say "Chrome", since they run on WebKit like Safari.
+ */
+const isChromium = () => {
+    const ua = navigator.userAgent;
+    return /\b(?:Chrome|Chromium|Edg)\/\d/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS|iPhone|iPad|iPod/.test(ua);
+};
+
+/**
+ * Extra rules for the other engines (Firefox, Safari), appended after the shared CSS so they only change those browsers.
+ * - Page sizes are written in millimetres: "A4 portrait" style keywords are not read by every engine, and a dropped
+ *   rule leaves the picture pages on the default A3 sheet, half empty.
+ * - The diagram sheet gets the same margins as the default sheet, so a diagram fits its page even where the
+ *   named page "diagram" is ignored and the default sheet is used.
+ */
+const CSS_NON_CHROMIUM = `
+@page diagram { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; }
+@page a4-portrait { size: 210mm 297mm; margin: 0; }
+@page a4-landscape { size: 297mm 210mm; margin: 0; }
+@page a3-portrait { size: 297mm 420mm; margin: 0; }
+@page a3-landscape { size: 420mm 297mm; margin: 0; }
+.diagram-page { width: 400mm; height: 273mm; }
+`;
+
+const pageCss = (issueDate: string, chromium: boolean) => css(issueDate) + (chromium ? "" : CSS_NON_CHROMIUM);
+
 function serviceHtml({ detail, diagrams }: Loaded[number]["services"][number]): string {
     const entries: FlowEntry[] = detail.labels.map((l) => ({ key: l.key, name: l.name, color: l.color ?? DEFAULT_LABEL_COLOR, html: l.html }));
     const cols = paginate(entries, COL_WIDTH, COL_HEIGHT);
@@ -257,6 +286,7 @@ function documentHtml(
     data: Loaded,
     custom: PdfPage[],
     issueDate: string,
+    chromium: boolean,
 ): string {
     const customAt = (slot: PdfPage["slot"], divisionId?: number) =>
         customPagesHtml(custom.filter((p) => p.slot === slot && (divisionId === undefined || p.serviceDivisionId === divisionId)));
@@ -288,7 +318,7 @@ function documentHtml(
 
     const fullHtml = (
         `<!doctype html><html lang="ar" dir="rtl" class="${esc(root.className.replace(/\bdark\b/g, ""))}" style="${esc(root.getAttribute("style") ?? "")}">` +
-        `<head><meta charset="utf-8"><title>${PRINT_TITLE}</title>${styles}<style>${css(issueDate)}</style></head><body>` +
+        `<head><meta charset="utf-8"><title>${PRINT_TITLE}</title>${styles}<style>${pageCss(issueDate, chromium)}</style></head><body>` +
         customAt("start") +
         `<div class="cover"><h1>دليل الخدمات</h1><p>وزارة الإسكان والتخطيط العمراني</p></div>` +
         `<div class="toc"><h2>الفهرس</h2><div class="cols">${toc}</div></div>${body}` +
@@ -311,12 +341,16 @@ export async function exportGuidePdf(onProgress?: (done: number, total: number) 
 
         const ids = tree.flatMap((d) => d.services.map((s) => s.id));
 
+        const chromium = isChromium();
+        console.info(`[PDF Export] Layout for ${chromium ? "Chromium" : "non-Chromium"} browser`);
+        const area = chromium ? DIAGRAM_AREA : DIAGRAM_AREA_OTHER;
+
         let done = 0;
         onProgress?.(0, ids.length);
 
         const loaded = new Map(
             await pool(ids, 6, async (id) => {
-                const s = await loadService(id);
+                const s = await loadService(id, area);
                 done++;
                 onProgress?.(done, ids.length);
                 return [id, s] as const;
@@ -334,6 +368,7 @@ export async function exportGuidePdf(onProgress?: (done: number, total: number) 
             data,
             customPages,
             issueDate,
+            chromium,
         );
 
         if (frame) {
