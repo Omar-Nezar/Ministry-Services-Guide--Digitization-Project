@@ -168,20 +168,21 @@ const css = (issueDate: string) => `
 html, body { background: #fff !important; background-image: none !important; color: #111; }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 body { margin: 0; }
-.cover { height: 255mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 24px; break-after: page; }
+.cover { height: 255mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 24px; break-after: page; page-break-after: always; }
 .cover h1 { font-size: 64px; margin: 0; color: ${DEFAULT_LABEL_COLOR}; }
 .cover p { font-size: 28px; margin: 0; color: #555; }
-.toc { break-after: page; }
+.toc { break-after: page; page-break-after: always; }
 .toc h2 { color: ${DEFAULT_LABEL_COLOR}; font-size: 32px; }
 .toc .cols { column-count: 3; column-gap: 40px; }
-.toc h3 { margin: 18px 0 4px; font-size: 18px; break-after: avoid; }
+.toc h3 { margin: 18px 0 4px; font-size: 18px; break-after: avoid; page-break-after: avoid; }
 .toc ul { margin: 0; padding-inline-start: 22px; font-size: 14px; line-height: 1.7; }
 .toc a { color: inherit; text-decoration: none; }
 
-.division { break-before: page; }
-.division > h1 { margin: 0 0 12px; padding: 6px 20px; color: #fff; font-size: 26px; line-height: 1.4; border-radius: 8px; }
+.division { break-before: page; page-break-before: always; }
+.division > h1 { margin: 0 0 12px; padding: 6px 20px; color: #fff; font-size: 26px; line-height: 1.4; border-radius: 8px; break-inside: avoid; break-after: avoid; }
 
-.custom-page { position: relative; break-before: page; break-after: page; overflow: hidden; background: #fff; }
+.custom-page { position: relative; overflow: hidden; background: #fff; }
+.custom-page:not(:first-child) { break-before: page; page-break-before: always; }
 .custom-page img { display: block; width: 100%; height: 100%; }
 .custom-page img.turned { position: absolute; left: 50%; top: 50%; }
 .custom-page.a4-portrait { page: a4-portrait; width: 210mm; height: 297mm; }
@@ -189,15 +190,15 @@ body { margin: 0; }
 .custom-page.a3-portrait { page: a3-portrait; width: 297mm; height: 420mm; }
 .custom-page.a3-landscape { page: a3-landscape; width: 420mm; height: 297mm; }
 
-.service + .service { break-before: page; }
+.service + .service { break-before: page; page-break-before: always; }
 .service > h2 { margin: 0 0 10px; font-size: 24px; line-height: 1.4; break-inside: avoid; break-after: avoid; }
 .service > h2.long { font-size: 20px; }
 .division > h1 { break-inside: avoid; break-after: avoid; }
 .flow-page { display: flex; gap: ${GAP}px; width: ${SHEET}px; padding: ${PAD}px; border: 1px solid var(--border, #ddd); border-radius: 8px; break-inside: avoid; }
-.flow-page + .flow-page { break-before: page; }
+.flow-page + .flow-page { break-before: page; page-break-before: always; }
 .flow-page > .slot { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; gap: 6px; }
-.sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; }
-.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; break-after: page; page: diagram; width: 420mm; height: 283mm; }
+.sub { margin: 18px 0 8px; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; break-after: avoid; page-break-after: avoid; }
+.diagram-page { box-sizing: border-box; display: flex; flex-direction: column; gap: 4mm; padding: 8mm; overflow: hidden; background: #fff; break-before: page; page-break-before: always; page: diagram; width: 420mm; height: 100vh; }
 .diagram-page h4 { flex: none; margin: 0; font-size: 20px; color: ${DEFAULT_LABEL_COLOR}; }
 .diagram-page svg { display: block; flex: 1 1 0; min-height: 0; width: 100%; background: #fff; }
 .figure { width: ${SHEET}px; break-inside: avoid; margin: 0 0 16px; border: 1px solid #ddd; border-radius: 8px; padding: 12px; }
@@ -222,6 +223,7 @@ const isChromium = () => {
  *   rule leaves the picture pages on the default A3 sheet, half empty.
  * - The diagram sheet gets the same margins as the default sheet, so a diagram fits its page even where the
  *   named page "diagram" is ignored and the default sheet is used.
+ * - Reset .toc break-after to avoid double-break collision with .division break-before on non-Chromium engines.
  */
 const CSS_NON_CHROMIUM = `
 @page diagram { size: ${PRINT_PAGE_SIZE}; margin: 10mm 10mm 14mm; }
@@ -229,7 +231,8 @@ const CSS_NON_CHROMIUM = `
 @page a4-landscape { size: 297mm 210mm; margin: 0; }
 @page a3-portrait { size: 297mm 420mm; margin: 0; }
 @page a3-landscape { size: 420mm 297mm; margin: 0; }
-.diagram-page { width: 400mm; height: 273mm; }
+.diagram-page { width: 400mm; height: 100vh; }
+.toc { break-after: auto; page-break-after: auto; }
 `;
 
 const pageCss = (issueDate: string, chromium: boolean) => css(issueDate) + (chromium ? "" : CSS_NON_CHROMIUM);
@@ -274,8 +277,8 @@ function customPagesHtml(pages: PdfPage[]): string {
                 (p.rotation === 0
                     ? ""
                     : quarter
-                      ? `;width:${h}mm;height:${w}mm;transform:translate(-50%,-50%) rotate(${p.rotation}deg)`
-                      : `;transform:rotate(180deg)`);
+                        ? `;width:${h}mm;height:${w}mm;transform:translate(-50%,-50%) rotate(${p.rotation}deg)`
+                        : `;transform:rotate(180deg)`);
             const turned = quarter ? ' class="turned"' : "";
             return `<div class="custom-page ${p.size.toLowerCase()}-${p.orientation}"><img${turned} src="${esc(uploadUrl(p.imagePath))}" alt="" style="${style}"></div>`;
         })
