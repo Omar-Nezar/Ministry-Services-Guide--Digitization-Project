@@ -225,12 +225,14 @@ export function FeedbackSurvey() {
   return (
     <>
       <Header />
-      <main className="relative isolate flex min-h-[calc(100vh-4.5rem)] items-center justify-center overflow-hidden bg-background px-4 py-12 text-foreground sm:px-6 lg:px-8">
+      <main className="relative isolate flex min-h-[calc(100dvh-var(--header-h)-5.5rem)] items-center justify-center overflow-hidden px-4 py-12 text-foreground sm:px-6 lg:px-8">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-96 bg-linear-to-b from-primary/8 to-transparent"
-        />
-        <div className="my-auto w-full max-w-2xl">
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem] text-secondary-accent [mask-image:radial-gradient(ellipse_70%_80%_at_50%_0%,black,transparent)]"
+        >
+          <div className="pattern-khatam absolute inset-0 opacity-[0.06]" />
+        </div>
+        <div className="enter my-auto w-full max-w-2xl">
           <Link
             to="/"
             className="mb-6 inline-flex items-center gap-2 rounded-md text-sm font-medium text-muted-foreground outline-none transition hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
@@ -239,7 +241,8 @@ export function FeedbackSurvey() {
             {isArabic ? "العودة إلى الرئيسية" : "Back to home"}
           </Link>
 
-          <section className="rounded-2xl border bg-card p-5 shadow-sm sm:p-8">
+          <section className="relative overflow-hidden rounded-3xl border bg-card p-5 shadow-lift sm:p-9">
+            <span aria-hidden="true" className="brand-strip absolute inset-x-0 top-0" />
             {submitted ? (
               <div className="py-8 text-center">
                 <CheckCircle2 aria-hidden="true" className="mx-auto size-12 text-primary" />

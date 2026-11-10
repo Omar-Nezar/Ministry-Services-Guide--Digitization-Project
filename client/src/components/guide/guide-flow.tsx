@@ -42,9 +42,9 @@ export function GuideFlow({ entries }: { entries: FlowEntry[] }) {
 
   return (
     <div ref={ref} dir="rtl" className="flex flex-col gap-4">
-      {!pages && <div className="h-64 animate-pulse rounded-lg bg-muted" />}
+      {!pages && <div className="skeleton h-64 rounded-2xl" />}
       {pages?.map((cols, i) => (
-        <div key={i} className="flex gap-3 rounded-lg border bg-card p-4 shadow-xs max-md:flex-col">
+        <div key={i} className="flex gap-3 rounded-2xl border bg-card p-4 shadow-card max-md:flex-col">
           {[0, 1].map((slot) => (
             <div
               key={slot}

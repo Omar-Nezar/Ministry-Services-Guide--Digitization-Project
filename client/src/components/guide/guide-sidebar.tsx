@@ -71,7 +71,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
   const placeholder = isArabic ? "ابحث عن خدمة…" : "Search services…";
 
   return (
-    <div className="flex h-full flex-col py-2">
+    <div className="flex h-full flex-col rounded-2xl border bg-card p-3 shadow-card">
       <div className="relative">
         <Search
           aria-hidden="true"
@@ -84,7 +84,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
           onKeyDown={(e) => e.key === "Escape" && setQuery("")}
           placeholder={placeholder}
           aria-label={placeholder}
-          className="h-10 w-full rounded-lg border bg-card ps-9 pe-9 text-sm shadow-xs outline-none transition placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/20"
+          className="h-10 w-full rounded-xl border border-input bg-background ps-9 pe-9 text-sm outline-none transition duration-200 placeholder:text-muted-foreground hover:border-foreground/25 focus-visible:border-primary/60 focus-visible:ring-3 focus-visible:ring-primary/15"
         />
         {searching ? (
           <button
@@ -113,7 +113,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
         </p>
       )}
 
-      <nav className="-me-2 mt-4 flex-1 overflow-y-auto pe-2" aria-label={isArabic ? "الخدمات" : "Services"}>
+      <nav className="scrollbar-thin -me-2 mt-3 flex-1 overflow-y-auto pe-2" aria-label={isArabic ? "الخدمات" : "Services"}>
         {error && (
           <p className="px-2 text-sm text-destructive">
             {isArabic ? "تعذر تحميل الخدمات." : "Unable to load the services."}
@@ -126,7 +126,7 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
             const isActive = d.id === activeDivisionId;
             return (
               <li key={d.id}>
-                <div className={cn("group flex items-center rounded-lg transition-colors hover:bg-muted", isActive && "bg-accent")}>
+                <div className={cn("group flex items-center rounded-lg transition-colors duration-200 hover:bg-muted", isActive && "bg-accent font-semibold")}>
                   <NavLink
                     to={guidePaths.division(d.id)}
                     onClick={onNavigate}
@@ -147,12 +147,12 @@ export function GuideSidebar({ tree, error, onNavigate }: Props) {
                     aria-expanded={isOpen}
                     className="me-1 grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-background"
                   >
-                    <ChevronDown aria-hidden="true" className={cn("size-4 transition-transform", !isOpen && "ltr:-rotate-90 rtl:rotate-90")} />
+                    <ChevronDown aria-hidden="true" className={cn("size-4 transition-transform duration-300 ease-brand", !isOpen && "ltr:-rotate-90 rtl:rotate-90")} />
                   </button>
                 </div>
 
                 {isOpen && (
-                  <ul className="ms-5 mt-1 mb-2 space-y-0.5 border-s ps-2">
+                  <ul className="ms-5 mt-1 mb-2 animate-in space-y-0.5 border-s ps-2 duration-300 fade-in-0 slide-in-from-top-1">
                     {d.services.map((s) => (
                       <li key={s.id}>
                         <NavLink
@@ -186,7 +186,7 @@ function TreeSkeleton() {
   return (
     <div className="space-y-2">
       {Array.from({ length: 6 }, (_, i) => (
-        <div key={i} className="h-10 animate-pulse rounded-lg bg-muted" />
+        <div key={i} className="skeleton h-10 rounded-lg" />
       ))}
     </div>
   );

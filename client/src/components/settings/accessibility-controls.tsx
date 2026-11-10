@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Accessibility, ChevronDown, Minus, Plus, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { barButtonClass, barPanelMotion } from "@/components/general/bar-button";
 import { useDisplaySettings } from "@/components/settings/use-display-settings";
 import {
   Collapsible,
@@ -157,24 +158,24 @@ export function AccessibilityControls({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="group relative"
+      className="group"
     >
       <CollapsibleTrigger
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] px-3 text-sm font-medium text-[var(--secondary-accent-foreground)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
+        className={barButtonClass}
         aria-label={isArabic ? "إعدادات إمكانية الوصول" : "Accessibility settings"}
       >
         <Accessibility aria-hidden="true" className="size-4" />
-        <span className="hidden sm:inline">
+        <span className="hidden md:inline">
           {isArabic ? "إمكانية الوصول" : "Accessibility"}
         </span>
         <ChevronDown
           aria-hidden="true"
-          className={`size-3.5 opacity-75 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`size-3.5 opacity-75 transition-transform duration-300 ease-brand max-md:hidden ${open ? "rotate-180" : ""}`}
         />
       </CollapsibleTrigger>
       <CollapsibleContent
-        className="fixed inset-x-3 top-14 z-50 mx-auto max-w-4xl rounded-2xl border border-border bg-popover p-4 text-popover-foreground shadow-xl sm:inset-x-4 sm:p-5"
+        className={`absolute inset-x-3 top-full z-50 mx-auto mt-2 max-h-[calc(100svh-var(--header-h)-1.5rem)] max-w-4xl overflow-y-auto rounded-2xl border border-border bg-popover p-4 text-popover-foreground shadow-float sm:inset-x-4 sm:p-5 ${barPanelMotion}`}
         aria-label={isArabic ? "إعدادات إمكانية الوصول" : "Accessibility settings"}
       >
         <div className="mb-3 flex items-start justify-between gap-3">

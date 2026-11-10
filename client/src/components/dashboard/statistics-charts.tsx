@@ -117,7 +117,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
   return (
     <section className="space-y-4" aria-label={t("إحصاءات دليل الخدمات", "Service catalogue statistics")}>
       <header className="space-y-1">
-        <h2 className="text-lg font-semibold">{t("نظرة عامة على الخدمات", "Service catalogue overview")}</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t("نظرة عامة على الخدمات", "Service catalogue overview")}</h2>
         <p className="text-sm text-muted-foreground">
           {t("توزيع الخدمات وأحجام المجالات في الدليل.", "Service distribution and division sizes across the catalogue.")}
         </p>
@@ -130,7 +130,7 @@ export function StatisticsCharts({ divisions, error = false }: StatisticsChartsP
       ) : !statistics ? (
         <div className="grid gap-4 md:grid-cols-2" aria-busy="true">
           {Array.from({ length: 3 }, (_, index) => (
-            <div key={index} className="h-80 animate-pulse rounded-xl bg-muted" />
+            <div key={index} className="skeleton h-80 rounded-2xl" />
           ))}
         </div>
       ) : statistics.sorted.length === 0 ? (

@@ -82,16 +82,17 @@ export function EditorLayout() {
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-      isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+      "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200",
+      isActive ? "bg-primary text-primary-foreground shadow-card" : "text-muted-foreground hover:bg-accent hover:text-foreground",
     );
 
   return (
     <div className="min-h-screen text-foreground" onClickCapture={guardLinks}>
       <Header />
-      <div className="border-b bg-card">
-        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-2 px-4 py-2 lg:px-6">
-          <span className="me-2 text-sm font-semibold">{isArabic ? "محرر دليل الخدمات" : "Services catalogue editor"}</span>
+      <div className="border-b bg-card/80 shadow-card backdrop-blur">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center gap-2 px-4 py-2.5 sm:px-6">
+          <span className="me-2 flex items-center gap-2 text-sm font-semibold">
+            <span aria-hidden="true" className="h-4 w-[3px] rounded-full bg-brand-gold" />{isArabic ? "محرر دليل الخدمات" : "Services catalogue editor"}</span>
           <nav className="flex items-center gap-1" aria-label={isArabic ? "المحرر" : "Editor"}>
             <NavLink to={editorPaths.home} end className={navClass}>
               {isAdmin ? (isArabic ? "لوحة التحكم" : "Dashboard") : isArabic ? "الخدمات" : "Services"}
@@ -124,11 +125,11 @@ export function EditorLayout() {
         )}
       </div>
 
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 lg:flex-row lg:gap-8 lg:px-6">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 sm:px-6 lg:flex-row lg:gap-8">
         <Button
           type="button"
           variant="outline"
-          className="mt-4 w-fit lg:hidden"
+          className="mt-4 h-10 w-fit gap-2 rounded-xl bg-card px-4 shadow-card lg:hidden"
           aria-expanded={menuOpen}
           onClick={() => setMenuFor(menuOpen ? null : pathname)}
         >
@@ -137,7 +138,7 @@ export function EditorLayout() {
         </Button>
 
         <aside className={cn("shrink-0 lg:block lg:w-80", !menuOpen && "hidden")}>
-          <div className="py-4 max-lg:max-h-[70svh] max-lg:overflow-y-auto lg:sticky lg:top-4 lg:max-h-[calc(100svh-2rem)] lg:overflow-y-auto">
+          <div className="scrollbar-thin py-4 max-lg:max-h-[70svh] max-lg:overflow-y-auto lg:sticky lg:top-(--header-h) lg:max-h-[calc(100svh-var(--header-h))] lg:overflow-y-auto lg:py-6">
             <EditorTree
               tree={tree}
               error={error}
@@ -150,7 +151,7 @@ export function EditorLayout() {
         </aside>
 
         <main className="min-w-0 flex-1 py-6 lg:py-8">
-          <Suspense fallback={<div className="h-64 animate-pulse rounded-xl bg-muted" />}>
+          <Suspense fallback={<div className="skeleton h-64 rounded-2xl" />}>
             <Outlet context={context} />
           </Suspense>
         </main>

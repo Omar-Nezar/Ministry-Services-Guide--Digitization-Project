@@ -9,7 +9,17 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Geist Variable', 'Segoe UI', 'Noto Sans Arabic', system-ui, Tahoma, sans-serif;
+    --color-brand-surface: var(--brand-surface);
+    --color-brand-surface-foreground: var(--brand-surface-foreground);
+    --color-brand-gold: var(--brand-gold);
+    --color-secondary-accent: var(--secondary-accent);
+    --color-secondary-accent-foreground: var(--secondary-accent-foreground);
+    /* Shadows are tinted with the navy of the brand instead of plain black */
+    --shadow-card: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.03);
+    --shadow-lift: 0 2px 6px hsl(var(--shadow-color) / 0.05), 0 18px 36px -12px hsl(var(--shadow-color) / 0.2);
+    --shadow-float: 0 30px 70px -20px hsl(var(--shadow-color) / 0.35);
+    --ease-brand: cubic-bezier(0.16, 1, 0.3, 1);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -55,78 +65,88 @@
 
 :root {
     --font-scale: 1;
-    --ring: var(--primary);
+    /* Height of the sticky ministry bar; sticky panels below it start here */
+    --header-h: 3.75rem;
+    /* Official identity: the band behind the ministry logo, and the gold of the emblem */
+    --brand-surface: #e8edf1;
+    --brand-surface-foreground: #0d2a45;
+    --brand-gold: #9f905d;
     --secondary-sand: #c68e4c;
     --secondary-water: #225d6b;
     --secondary-palm: #3c441b;
     --secondary-accent: #074169;
     --secondary-accent-foreground: #ffffff;
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    /* Cool neutrals taken from the logo band, so every surface belongs to the same family */
+    --background: oklch(0.983 0.004 240);
+    --foreground: oklch(0.24 0.03 252);
+    --card: oklch(0.999 0.001 240);
+    --card-foreground: oklch(0.24 0.03 252);
+    --popover: oklch(0.999 0.001 240);
+    --popover-foreground: oklch(0.24 0.03 252);
+    /* The chosen primary colour (red or gold) arrives as --brand-primary from the display settings */
+    --primary: var(--brand-primary, #de2f27);
+    --primary-foreground: var(--brand-primary-foreground, #ffffff);
+    --secondary: oklch(0.955 0.009 240);
+    --secondary-foreground: oklch(0.3 0.03 252);
+    --muted: oklch(0.956 0.008 240);
+    --muted-foreground: oklch(0.48 0.022 252);
+    --accent: oklch(0.948 0.012 240);
+    --accent-foreground: oklch(0.24 0.03 252);
+    --destructive: oklch(0.55 0.21 27);
+    --border: oklch(0.905 0.01 240);
+    --input: oklch(0.855 0.014 240);
+    --ring: var(--primary);
+    --shadow-color: 212 55% 16%;
+    /* Charts use the ministry's secondary palette */
+    --chart-1: #074169;
+    --chart-2: #225d6b;
+    --chart-3: #9f905d;
+    --chart-4: #c68e4c;
+    --chart-5: #3d5e69;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: oklch(0.975 0.005 240);
+    --sidebar-foreground: oklch(0.24 0.03 252);
+    --sidebar-primary: var(--secondary-accent);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: oklch(0.948 0.012 240);
+    --sidebar-accent-foreground: oklch(0.24 0.03 252);
+    --sidebar-border: oklch(0.905 0.01 240);
+    --sidebar-ring: var(--primary);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    /* Deep navy rather than neutral grey, so the dark mode keeps the ministry colours */
+    --brand-surface: #e8edf1;
+    /* A lighter tint of the primary with dark text, so it passes AA on the navy surfaces */
+    --primary: color-mix(in oklch, var(--brand-primary, #de2f27) 72%, white);
+    --primary-foreground: oklch(0.2 0.03 25);
+    --background: oklch(0.17 0.018 252);
+    --foreground: oklch(0.955 0.006 240);
+    --card: oklch(0.207 0.02 252);
+    --card-foreground: oklch(0.955 0.006 240);
+    --popover: oklch(0.22 0.022 252);
+    --popover-foreground: oklch(0.955 0.006 240);
+    --secondary: oklch(0.26 0.022 252);
+    --secondary-foreground: oklch(0.94 0.006 240);
+    --muted: oklch(0.25 0.02 252);
+    --muted-foreground: oklch(0.73 0.016 245);
+    --accent: oklch(0.27 0.024 252);
+    --accent-foreground: oklch(0.955 0.006 240);
+    --destructive: oklch(0.7 0.18 24);
+    --border: oklch(1 0 0 / 9%);
+    --input: oklch(1 0 0 / 16%);
+    --shadow-color: 220 60% 3%;
+    --chart-1: #6fa3d1;
+    --chart-2: #5fb0bf;
+    --chart-3: #c9bb8a;
+    --chart-4: #e0a865;
+    --chart-5: #8fb0bb;
+    --sidebar: oklch(0.2 0.02 252);
+    --sidebar-foreground: oklch(0.955 0.006 240);
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: oklch(0.27 0.024 252);
+    --sidebar-accent-foreground: oklch(0.955 0.006 240);
+    --sidebar-border: oklch(1 0 0 / 9%);
 }
 
 [data-contrast="high"] {
@@ -296,17 +316,172 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
-    /* Soft wash of the primary colour at the top of every page */
-    background-image: linear-gradient(to bottom, color-mix(in oklch, var(--primary) 8%, transparent), transparent 24rem);
-    background-repeat: no-repeat;
-    font-family: "Geist Variable", "Noto Sans Arabic", "Segoe UI", sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    transition: background-color 0.3s ease, color 0.3s ease;
     }
   html {
     @apply font-sans;
     font-size: calc(100% * var(--font-scale, 1));
     scroll-behavior: smooth;
     }
+  ::selection {
+    background-color: color-mix(in oklch, var(--secondary-accent) 22%, transparent);
+    }
+}
+
+/* ============================================================================
+   Identity: an eight-pointed star lattice (khatam), the geometric pattern of
+   Omani doors and plasterwork. It is a mask, so it takes the colour of the
+   element (text-*) and follows the theme; maximum contrast hides it.
+   ============================================================================ */
+.pattern-khatam {
+  background-color: currentColor;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='21' y='21' width='22' height='22'/%3E%3Crect x='21' y='21' width='22' height='22' transform='rotate(45 32 32)'/%3E%3Crect x='-11' y='-11' width='22' height='22'/%3E%3Crect x='-11' y='-11' width='22' height='22' transform='rotate(45 0 0)'/%3E%3Crect x='53' y='-11' width='22' height='22'/%3E%3Crect x='53' y='-11' width='22' height='22' transform='rotate(45 64 0)'/%3E%3Crect x='-11' y='53' width='22' height='22'/%3E%3Crect x='-11' y='53' width='22' height='22' transform='rotate(45 0 64)'/%3E%3Crect x='53' y='53' width='22' height='22'/%3E%3Crect x='53' y='53' width='22' height='22' transform='rotate(45 64 64)'/%3E%3C/g%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.2'%3E%3Crect x='21' y='21' width='22' height='22'/%3E%3Crect x='21' y='21' width='22' height='22' transform='rotate(45 32 32)'/%3E%3Crect x='-11' y='-11' width='22' height='22'/%3E%3Crect x='-11' y='-11' width='22' height='22' transform='rotate(45 0 0)'/%3E%3Crect x='53' y='-11' width='22' height='22'/%3E%3Crect x='53' y='-11' width='22' height='22' transform='rotate(45 64 0)'/%3E%3Crect x='-11' y='53' width='22' height='22'/%3E%3Crect x='-11' y='53' width='22' height='22' transform='rotate(45 0 64)'/%3E%3Crect x='53' y='53' width='22' height='22'/%3E%3Crect x='53' y='53' width='22' height='22' transform='rotate(45 64 64)'/%3E%3C/g%3E%3C/svg%3E");
+  -webkit-mask-size: 64px 64px;
+  mask-size: 64px 64px;
+  pointer-events: none;
+}
+[data-contrast="maximum"] .pattern-khatam,
+[data-contrast="high"] .pattern-khatam {
+  display: none;
+}
+
+/* The flag-like strip at the very top: primary, gold, secondary */
+.brand-strip {
+  height: 3px;
+  background: linear-gradient(
+    to right,
+    var(--primary) 0 33.34%,
+    var(--brand-gold) 33.34% 66.67%,
+    var(--secondary-accent) 66.67% 100%
+  );
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
+}
+
+/* ============================================================================
+   Motion. Everything here is a transform/opacity change, and all of it is
+   switched off by the "Reduce motion" setting or the system preference.
+   ============================================================================ */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes settle-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes header-elevate {
+  from {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  to {
+    box-shadow: 0 12px 30px -16px hsl(var(--shadow-color) / 0.6);
+  }
+}
+
+@keyframes skeleton-sweep {
+  from {
+    background-position: 150% 0;
+  }
+  to {
+    background-position: -50% 0;
+  }
+}
+
+/* Page content arriving: a short rise, staggered with style="--i: n". `backwards` (not `both`) so the
+   transform is gone once it ends and fixed-position children are not trapped */
+.enter {
+  animation: rise-in 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+.enter-settle {
+  animation: settle-in 1s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+/* Cards further down the page rise in as they scroll into view (no JS; browsers
+   without scroll-driven animations simply show them) */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: rise-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 45%;
+  }
+}
+
+/* The ministry bar gains a shadow once the page scrolls under it */
+@supports (animation-timeline: scroll()) {
+  .header-elevate {
+    animation: header-elevate linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0px 140px;
+  }
+}
+
+/* Loading placeholders: a soft light sweep instead of a blink */
+.skeleton {
+  background-color: var(--muted);
+  background-image: linear-gradient(
+    100deg,
+    transparent 30%,
+    color-mix(in oklch, var(--card) 70%, transparent) 50%,
+    transparent 70%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    animation: none !important;
+  }
+}
+
+[data-reduce-motion="on"] {
+  scroll-behavior: auto;
+}
+[data-reduce-motion="on"] *,
+[data-reduce-motion="on"] *::before,
+[data-reduce-motion="on"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+[data-reduce-motion="on"] .reveal {
+  animation: none !important;
 }
 
 /* ============================================================================

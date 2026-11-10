@@ -29,11 +29,11 @@ export function GuideLayout() {
   return (
     <div className="min-h-screen text-foreground">
       <Header />
-      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 lg:flex-row lg:gap-8 lg:px-6">
+      <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 sm:px-6 lg:flex-row lg:gap-8">
         <Button
           type="button"
           variant="outline"
-          className="mt-4 w-fit lg:hidden"
+          className="mt-5 h-10 w-fit gap-2 rounded-xl bg-card px-4 shadow-card lg:hidden"
           aria-expanded={menuOpen}
           onClick={() => setMenuFor(menuOpen ? null : pathname)}
         >
@@ -41,14 +41,17 @@ export function GuideLayout() {
           {isArabic ? "الخدمات" : "Services"}
         </Button>
 
-        <aside className={cn("shrink-0 lg:block lg:w-80", !menuOpen && "hidden")}>
-          <div className="max-lg:h-[70svh] lg:sticky lg:top-4 lg:h-[calc(100svh-2rem)]">
+        <aside className={cn("shrink-0 lg:block lg:w-80", menuOpen ? "animate-in fade-in-0 slide-in-from-top-2 duration-300" : "hidden")}>
+          <div className="max-lg:h-[70svh] lg:sticky lg:top-[calc(var(--header-h)+1.5rem)] lg:my-8 lg:h-[calc(100svh-var(--header-h)-3rem)]">
             <GuideSidebar tree={tree} error={treeError} onNavigate={() => setMenuFor(null)} />
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 py-6 lg:py-8">
-          <Outlet context={context} />
+        <main className="min-w-0 flex-1 pt-4 pb-14 lg:pt-8 lg:pb-16">
+          {/* keyed by the page, so every page arrives with the same short rise */}
+          <div key={pathname} className="enter">
+            <Outlet context={context} />
+          </div>
         </main>
       </div>
     </div>

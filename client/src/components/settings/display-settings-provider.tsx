@@ -164,8 +164,9 @@ export function DisplaySettingsProvider({
     root.dataset.highlightLinks = settings.highlightLinks ? "on" : "off";
     root.dataset.largeCursor = settings.largeCursor ? "on" : "off";
     root.dataset.reduceMotion = settings.reduceMotion ? "on" : "off";
-    root.style.setProperty("--primary", primary);
-    root.style.setProperty("--primary-foreground", getContrastingForeground(primary));
+    // index.css derives --primary from these (a lighter tint in dark mode, so red text stays readable there)
+    root.style.setProperty("--brand-primary", primary);
+    root.style.setProperty("--brand-primary-foreground", getContrastingForeground(primary));
     root.style.setProperty("--secondary-accent", secondary);
     root.style.setProperty(
       "--secondary-accent-foreground",

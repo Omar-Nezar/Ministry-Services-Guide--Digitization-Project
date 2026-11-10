@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { FileDown, Landmark, Languages } from "lucide-react";
+import { FileDown, Languages, LoaderCircle } from "lucide-react";
 import { Link } from "react-router";
 import { AccessibilityControls } from "@/components/settings/accessibility-controls";
 import { ThemeSwitcher } from "@/components/settings/theme-switcher";
-import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/components/settings/language-context";
+import { cn } from "@/lib/utils";
+import { barButtonClass } from "./bar-button";
 import moh_logo_full from "@/assets/moh_logo_full.png";
 
 export type HeaderLink = {
@@ -42,51 +43,64 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
 
   return (
     <>
-      <header className="w-full border-b border-[#d5dce2] bg-[#e8edf1]">
-        <div className="mx-auto flex max-w-7xl [direction:ltr] items-center justify-end px-4 py-3 sm:px-6 lg:px-8">
+      {/* Official masthead: the ministry logo sits on its own band colour */}
+      <div className="brand-strip" aria-hidden="true" />
+      <div className="relative border-b border-[#d4dce4] bg-brand-surface text-brand-surface-foreground">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2 sm:px-6 lg:px-8">
           <Link
             to="/"
             aria-label={isArabic ? "الصفحة الرئيسية" : "Home"}
-            className="inline-flex shrink-0 items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex shrink-0 items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-brand-surface-foreground/50"
           >
             <img
               src={moh_logo_full}
-              alt="Ministry of Housing Logo"
-              className="block h-12 w-auto max-w-55 object-contain sm:h-14"
+              alt={isArabic ? "شعار وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning logo"}
+              className="block h-10 w-auto max-w-[min(15rem,60vw)] object-contain sm:h-13"
             />
           </Link>
+
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            aria-label={isArabic ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
+            lang={isArabic ? "en" : "ar"}
+            className="inline-flex h-9 shrink-0 items-center gap-2 rounded-full border border-brand-surface-foreground/15 bg-white/55 px-3.5 text-sm font-semibold text-brand-surface-foreground shadow-card outline-none transition duration-200 hover:border-brand-surface-foreground/30 hover:bg-white focus-visible:ring-2 focus-visible:ring-brand-surface-foreground/50 active:scale-[0.98]"
+          >
+            <Languages aria-hidden="true" className="size-4 opacity-80" />
+            <span>{isArabic ? "English" : "العربية"}</span>
+          </button>
         </div>
-      </header>
-      <header className="relative z-40 border-b border-[color-mix(in_oklch,var(--secondary-accent-foreground)_25%,var(--secondary-accent))] bg-[var(--secondary-accent)] text-[var(--secondary-accent-foreground)]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
+      </div>
+
+      {/* The ministry bar follows the chosen secondary colour and stays at the top */}
+      <header className="header-elevate sticky top-0 z-40 border-b-2 border-brand-gold/70 bg-secondary-accent text-secondary-accent-foreground">
+        <div className="mx-auto flex h-(--header-h) max-w-7xl items-center gap-3 px-4 sm:px-6 lg:px-8">
           <Link
             to="/"
-            className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
+            className="group flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-secondary-accent-foreground"
             aria-label={isArabic ? "الصفحة الرئيسية" : "Home"}
           >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Landmark aria-hidden="true" className="size-5" />
-            </span>
-            <span>
-              <span className="block text-sm font-semibold leading-tight">
+            <span
+              aria-hidden="true"
+              className="h-8 w-[3px] shrink-0 rounded-full bg-brand-gold transition-transform duration-300 ease-brand group-hover:scale-y-125"
+            />
+            <span className="min-w-0">
+              <span className="block truncate text-[0.95rem] leading-tight font-semibold tracking-tight">
                 {isArabic ? "دليل الخدمات" : "Services Catalogue"}
               </span>
-              <span className="block text-xs text-[color-mix(in_oklch,var(--secondary-accent-foreground)_75%,transparent)]">
+              <span className="block truncate text-xs leading-tight text-secondary-accent-foreground/75">
                 {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
               </span>
             </span>
           </Link>
 
           {links.length > 0 && (
-            <nav
-              className="order-3 flex w-full items-center gap-1 overflow-x-auto sm:order-0 sm:w-auto"
-              aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}
-            >
+            <nav className="hidden items-center gap-1 md:flex" aria-label={isArabic ? "التنقل الرئيسي" : "Main navigation"}>
               {links.map((item) => (
                 <a
                   key={item.href}
                   href={item.href}
-                  className="rounded-lg px-3 py-2 text-sm font-medium text-[color-mix(in_oklch,var(--secondary-accent-foreground)_85%,transparent)] outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)] focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-secondary-accent-foreground/85 outline-none transition hover:bg-secondary-accent-foreground/12 hover:text-secondary-accent-foreground focus-visible:ring-2 focus-visible:ring-secondary-accent-foreground"
                 >
                   {isArabic ? item.arabicLabel : item.label}
                 </a>
@@ -94,32 +108,24 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
             </nav>
           )}
 
-          <div className="ms-auto flex items-center gap-2">
+          <div className="ms-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
             <ThemeSwitcher isArabic={isArabic} compact />
             <AccessibilityControls isArabic={isArabic} />
-            <Button
+            <button
               type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 whitespace-nowrap border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] bg-transparent text-[var(--secondary-accent-foreground)] hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)]"
+              className={barButtonClass}
               onClick={downloadPdf}
               disabled={pdf.busy}
               aria-label={pdfLabel}
+              title={pdfLabel}
             >
-              <FileDown aria-hidden="true" className="size-4" />
-              <span className="hidden sm:inline">{pdfLabel}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] bg-transparent text-[var(--secondary-accent-foreground)] hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)]"
-              onClick={toggleLanguage}
-              aria-label={isArabic ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
-            >
-              <Languages aria-hidden="true" className="size-4" />
-              <span>{isArabic ? "English" : "العربية"}</span>
-            </Button>
+              {pdf.busy ? (
+                <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
+              ) : (
+                <FileDown aria-hidden="true" className="size-4" />
+              )}
+              <span className={cn(pdf.busy || pdf.failed ? "max-sm:hidden" : "hidden lg:inline", "tabular-nums")}>{pdfLabel}</span>
+            </button>
           </div>
         </div>
       </header>

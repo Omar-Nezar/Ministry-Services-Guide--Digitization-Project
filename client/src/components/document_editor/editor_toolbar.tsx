@@ -42,7 +42,7 @@ export function EditorToolbar({
 }: EditorToolbarProps) {
 
   return (
-    <div className="sticky top-0 z-30 flex items-center gap-2 rounded-t-lg border-b bg-background/95 p-2 shadow-sm backdrop-blur supports-backdrop-filter:bg-background/60">
+    <div className="sticky top-(--header-h) z-30 flex items-center gap-2 rounded-t-lg border-b bg-background/95 p-2 shadow-sm backdrop-blur supports-backdrop-filter:bg-background/60">
       {/* Text Style */}
       <Select
         value={

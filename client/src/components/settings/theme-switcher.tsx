@@ -12,6 +12,7 @@ import type {
 } from "@/components/settings/display-settings";
 import { colors } from "@/styles/colors";
 import { Button } from "@/components/ui/button";
+import { barButtonClass, barPanelMotion } from "@/components/general/bar-button";
 
 const primaryColors: {
   id: PrimaryColor;
@@ -98,25 +99,25 @@ export function ThemeSwitcher({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="group relative"
+      className="group relative max-sm:static"
     >
       <CollapsibleTrigger
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-lg border border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] px-3 text-sm font-medium text-(--secondary-accent-foreground) outline-none transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:ring-2 focus-visible:ring-(--secondary-accent-foreground)"
+        className={barButtonClass}
         aria-label={isArabic ? "إعدادات المظهر" : "Appearance settings"}
       >
         <Palette aria-hidden="true" className="size-4" />
-        <span className={compact ? "hidden sm:inline" : ""}>
+        <span className={compact ? "hidden md:inline" : ""}>
           {isArabic ? "المظهر" : "Appearance"}
         </span>
         <ChevronDown
           aria-hidden="true"
-          className={`size-3.5 opacity-75 transition-transform ${open ? "rotate-180" : ""}`}
+          className={`size-3.5 opacity-75 transition-transform duration-300 ease-brand max-md:hidden ${open ? "rotate-180" : ""}`}
         />
       </CollapsibleTrigger>
 
       <CollapsibleContent
-        className="absolute inset-e-0 top-11 z-30 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-xl"
+        className={`absolute inset-e-0 top-11 z-30 w-[min(21rem,calc(100vw-2rem))] rounded-2xl border border-border bg-popover p-5 text-popover-foreground shadow-float max-sm:inset-x-3 max-sm:top-full max-sm:mt-2 max-sm:w-auto ${barPanelMotion}`}
         aria-label={isArabic ? "إعدادات المظهر" : "Appearance settings"}
       >
         <div className="mb-5">

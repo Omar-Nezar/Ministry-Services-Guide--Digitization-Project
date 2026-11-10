@@ -1,6 +1,7 @@
-import { MapPin } from "lucide-react";
+import { ArrowLeft, ArrowRight, MapPin, MessageSquareText } from "lucide-react";
 import { Link } from "react-router";
 import { useLanguage } from "@/components/settings/language-context";
+import moh_logo_red from "@/assets/moh_logo_full_BW.png";
 
 type SocialIconProps = { className?: string; "aria-hidden"?: "true" | "false" };
 const copyrightYear = new Date().getFullYear();
@@ -65,72 +66,96 @@ const socialLinks = [
 
 export function SiteFooter() {
   const { isArabic } = useLanguage();
+  const Arrow = isArabic ? ArrowLeft : ArrowRight;
+  const ministry = isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning";
 
   return (
-    <footer className="border-t border-[color-mix(in_oklch,var(--secondary-accent-foreground)_25%,var(--secondary-accent))] bg-(--secondary-accent) text-(--secondary-accent-foreground)">
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-2 lg:grid-cols-3 lg:px-8">
-        <section aria-labelledby="footer-ministry">
-          <h2 id="footer-ministry" className="text-base font-semibold">
-            {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
-          </h2>
-          <p className="mt-2 max-w-sm text-sm leading-6 opacity-80">
-            {isArabic
-              ? "تابع قنوات الوزارة الرسمية."
-              : "Follow the Ministry through its official social channels."}
-          </p>
-          <nav
-            aria-label={isArabic ? "حسابات التواصل الاجتماعي" : "Social media"}
-            className="mt-4 flex flex-wrap gap-2"
-          >
-            {socialLinks.map(({ href, label, Icon }) => (
-              <a
-                key={href}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={label}
-                className="inline-flex size-10 items-center justify-center rounded-lg border border-current/25 transition hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current"
-              >
-                <Icon aria-hidden="true" className="size-4" />
-              </a>
-            ))}
-          </nav>
-          <Link
-            to="/feedback"
-            className="mt-5 inline-flex rounded-md font-medium underline underline-offset-4 outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-current"
-          >
-            {isArabic ? "شاركنا رأيك في استبيان الملاحظات" : "Share your thoughts in our feedback survey"}
-          </Link>
-        </section>
+    <footer className="relative isolate overflow-hidden border-t-2 border-brand-gold/70 bg-secondary-accent text-secondary-accent-foreground">
+      <div aria-hidden="true" className="absolute inset-0 -z-10 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]">
+        <div className="pattern-khatam absolute inset-0 opacity-[0.06]" />
+      </div>
 
-        <section aria-labelledby="footer-location">
-          <h2 id="footer-location" className="flex items-center gap-2 text-base font-semibold">
-            <MapPin aria-hidden="true" className="size-4" />
-            {isArabic ? "موقع الوزارة" : "Ministry location"}
-          </h2>
-          <div className="mt-3 overflow-hidden rounded-xl border border-current/20 bg-background">
-            <iframe
-              title={isArabic ? "خريطة موقع الوزارة" : "Map showing the Ministry of Housing and Urban Planning"}
-              src={ministryMapUrl}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="grid gap-10 py-12 md:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1.1fr] lg:gap-12 lg:py-14">
+          <section aria-labelledby="footer-ministry" className="space-y-5">
+            <h2 id="footer-ministry" className="sr-only">
+              {ministry}
+            </h2>
+            <img
+              src={moh_logo_red}
+              alt={isArabic ? "شعار وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning logo"}
+              className="h-12 w-auto rounded-md shadow-lift sm:h-14"
               loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              className="h-52 w-full border-0"
             />
-          </div>
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-flex text-sm underline underline-offset-4 outline-none hover:opacity-80 focus-visible:ring-2 focus-visible:ring-current"
-          >
-            {isArabic ? "الاتجاهات على خرائط Google" : "Get directions on Google Maps"}
-          </a>
-        </section>
+            <p className="max-w-sm text-sm leading-6 text-secondary-accent-foreground/80">
+              {isArabic ? "تابع قنوات الوزارة الرسمية." : "Follow the Ministry through its official social channels."}
+            </p>
+            <nav aria-label={isArabic ? "حسابات التواصل الاجتماعي" : "Social media"} className="flex flex-wrap gap-2">
+              {socialLinks.map(({ href, label, Icon }) => (
+                <a
+                  key={href}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="inline-flex size-10 items-center justify-center rounded-full border border-secondary-accent-foreground/20 bg-secondary-accent-foreground/[0.04] outline-none transition duration-300 ease-brand hover:-translate-y-0.5 hover:border-secondary-accent-foreground/40 hover:bg-secondary-accent-foreground/12 focus-visible:ring-2 focus-visible:ring-secondary-accent-foreground"
+                >
+                  <Icon aria-hidden="true" className="size-4" />
+                </a>
+              ))}
+            </nav>
+          </section>
 
-        <p className="self-end text-sm opacity-75 md:col-span-2 lg:col-span-1">
-          © {copyrightYear}{" "}
-          {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
-        </p>
+          <section aria-labelledby="footer-feedback" className="flex flex-col">
+            <h2 id="footer-feedback" className="flex items-center gap-2 text-base font-semibold">
+              <MessageSquareText aria-hidden="true" className="size-4 text-brand-gold" />
+              {isArabic ? "استبيان الملاحظات" : "Feedback survey"}
+            </h2>
+            <p className="mt-3 max-w-sm text-sm leading-6 text-secondary-accent-foreground/80">
+              {isArabic
+                ? "شاركنا رأيك لمساعدتنا على تطوير دليل الخدمات."
+                : "Tell us what you think to help improve the services catalogue."}
+            </p>
+            <Link
+              to="/feedback"
+              className="group mt-5 inline-flex w-fit items-center gap-2 rounded-lg bg-secondary-accent-foreground px-4 py-2.5 text-sm font-semibold text-secondary-accent shadow-lift outline-none transition duration-300 ease-brand hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-secondary-accent-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-secondary-accent active:translate-y-0"
+            >
+              {isArabic ? "شاركنا رأيك" : "Share your thoughts"}
+              <Arrow aria-hidden="true" className="size-4 transition-transform duration-300 ease-brand group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+            </Link>
+          </section>
+
+          <section aria-labelledby="footer-location" className="md:col-span-2 lg:col-span-1">
+            <h2 id="footer-location" className="flex items-center gap-2 text-base font-semibold">
+              <MapPin aria-hidden="true" className="size-4 text-brand-gold" />
+              {isArabic ? "موقع الوزارة" : "Ministry location"}
+            </h2>
+            <div className="mt-3 overflow-hidden rounded-xl border border-secondary-accent-foreground/15 bg-background shadow-lift">
+              <iframe
+                title={isArabic ? "خريطة موقع الوزارة" : "Map showing the Ministry of Housing and Urban Planning"}
+                src={ministryMapUrl}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                className="h-48 w-full border-0"
+              />
+            </div>
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-sm text-sm font-medium underline decoration-secondary-accent-foreground/40 underline-offset-4 outline-none transition hover:decoration-secondary-accent-foreground focus-visible:ring-2 focus-visible:ring-secondary-accent-foreground"
+            >
+              {isArabic ? "الاتجاهات على خرائط Google" : "Get directions on Google Maps"}
+            </a>
+          </section>
+        </div>
+
+        <div className="flex flex-col gap-2 border-t border-secondary-accent-foreground/15 py-5 text-sm text-secondary-accent-foreground/70 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {copyrightYear} {ministry}
+          </p>
+          <p>{isArabic ? "سلطنة عُمان" : "Sultanate of Oman"}</p>
+        </div>
       </div>
     </footer>
   );

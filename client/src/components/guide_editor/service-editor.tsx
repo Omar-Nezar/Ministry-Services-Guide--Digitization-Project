@@ -192,7 +192,7 @@ export function ServiceEditor() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <div className="sticky top-0 z-20 -mx-2 flex flex-wrap items-center gap-3 border-b bg-background/90 px-2 py-2 backdrop-blur">
+      <div className="sticky top-(--header-h) z-20 -mx-2 flex flex-wrap items-center gap-3 border-b bg-background/90 px-2 py-2 backdrop-blur">
         <p className="text-sm font-medium text-muted-foreground">
           {isArabic ? (service.serviceDivision.nameAr ?? service.serviceDivision.name) : service.serviceDivision.name}
         </p>

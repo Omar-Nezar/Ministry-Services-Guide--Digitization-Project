@@ -14,6 +14,7 @@ import { GuideService } from "@/components/guide/guide-service";
 import { FeedbackSurvey } from "@/components/general/feedback-survey";
 import { SiteFooter } from "@/components/general/site-footer";
 import { loadCurrentUser } from "@/slices/auth.slice";
+import moh_logo_mini_NBG from "@/assets/moh_logo_mini_NBG.png";
 import type { AppDispatch, RootState } from "@/store/store";
 import { Navigate, Route, Routes } from "react-router";
 
@@ -54,7 +55,8 @@ function AppRoutes() {
     <div className="flex min-h-screen flex-col">
       <div className="flex-1">
         {!initialized ? (
-          <div className="flex min-h-[60vh] items-center justify-center">
+          <div role="status" className="flex min-h-[70vh] flex-col items-center justify-center gap-4 text-sm text-muted-foreground">
+            <img src={moh_logo_mini_NBG} alt="" aria-hidden="true" className="size-16 animate-pulse object-contain" />
             Loading session...
           </div>
         ) : (

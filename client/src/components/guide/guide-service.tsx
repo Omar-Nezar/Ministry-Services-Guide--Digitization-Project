@@ -1,6 +1,6 @@
 import { useMemo } from "react";
+import { Images, Workflow } from "lucide-react";
 import { useParams } from "react-router";
-import { textOn } from "@/components/flowchart/diagram";
 import { useLanguage } from "@/components/settings/language-context";
 import {
   DEFAULT_LABEL_COLOR,
@@ -38,10 +38,16 @@ export function GuideService() {
     [data],
   );
 
-  if (error) return <p className="text-destructive">{isArabic ? "تعذر تحميل الخدمة." : "Unable to load this service."}</p>;
+  if (error)
+    return (
+      <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-destructive">
+        {isArabic ? "تعذر تحميل الخدمة." : "Unable to load this service."}
+      </p>
+    );
   if (!ready) return <PageSkeleton />;
 
   const division = data.serviceDivision;
+  const color = division.color ?? DEFAULT_LABEL_COLOR;
 
   return (
     <article className="mx-auto max-w-6xl">
@@ -52,16 +58,19 @@ export function GuideService() {
         ]}
       />
 
-      <header className="mb-8">
-        <p className="text-sm font-medium text-muted-foreground">{divisionTitle(division, isArabic)}</p>
-        <h1
-          className="mt-2 text-2xl leading-relaxed font-bold tracking-tight md:text-[1.7rem]"
-          style={{
-            color: division.color ?? DEFAULT_LABEL_COLOR,
-            WebkitTextStroke: `1.5px ${textOn(division.color ?? DEFAULT_LABEL_COLOR)}`,
-            paintOrder: "stroke fill",
-          }}
+      <header className="relative isolate mb-8 overflow-hidden rounded-2xl border bg-card px-6 py-7 shadow-card sm:px-8">
+        <span aria-hidden="true" className="absolute inset-y-0 start-0 w-1.5" style={{ background: color }} />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 text-foreground [mask-image:linear-gradient(to_left,black,transparent_55%)] rtl:[mask-image:linear-gradient(to_right,black,transparent_55%)]"
         >
+          <div className="pattern-khatam absolute inset-0 opacity-[0.05]" />
+        </div>
+        <p className="inline-flex items-center gap-2 rounded-full border bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
+          <span aria-hidden="true" className="size-2 rounded-full" style={{ background: color }} />
+          {divisionTitle(division, isArabic)}
+        </p>
+        <h1 className="mt-3 text-2xl leading-relaxed font-semibold tracking-tight text-balance md:text-[1.75rem]">
           {serviceTitle(data.name)}
         </h1>
       </header>
@@ -70,8 +79,9 @@ export function GuideService() {
         <GuideFlow entries={entries} />
 
         {data.flowcharts.length > 0 && (
-          <section aria-labelledby="flowcharts" className="flex flex-col gap-4">
-            <h2 id="flowcharts" className="text-lg font-bold text-primary">
+          <section aria-labelledby="flowcharts" className="reveal flex flex-col gap-4">
+            <h2 id="flowcharts" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+              <SectionIcon icon={Workflow} />
               {isArabic ? "مخطط سير الإجراء" : "Procedure flowchart"}
             </h2>
             {data.flowcharts.map((f) => (
@@ -81,8 +91,9 @@ export function GuideService() {
         )}
 
         {data.images.length > 0 && (
-          <section aria-labelledby="pictures" className="flex flex-col gap-4">
-            <h2 id="pictures" className="text-lg font-bold text-primary">
+          <section aria-labelledby="pictures" className="reveal flex flex-col gap-4">
+            <h2 id="pictures" className="flex items-center gap-2.5 text-lg font-semibold tracking-tight">
+              <SectionIcon icon={Images} />
               {isArabic ? "الصور" : "Pictures"}
             </h2>
             {data.images.map((image) => (
@@ -95,13 +106,21 @@ export function GuideService() {
   );
 }
 
+function SectionIcon({ icon: Icon }: { icon: typeof Workflow }) {
+  return (
+    <span aria-hidden="true" className="grid size-8 place-items-center rounded-lg bg-primary/10 text-primary">
+      <Icon className="size-4" />
+    </span>
+  );
+}
+
 function Picture({ image }: { image: GuideImage }) {
   return (
-    <figure className="flex flex-col gap-2 rounded-lg border bg-card p-4 shadow-xs">
+    <figure className="flex flex-col gap-2 rounded-2xl border bg-card p-4 shadow-card">
       <img
         src={uploadUrl(image.imagePath)}
         alt={image.caption ?? ""}
-        className={cn("w-full rounded-md bg-muted", image.imageFit === "cover" ? "h-[75vh] object-cover" : "max-h-[85vh] object-contain")}
+        className={cn("w-full rounded-lg bg-muted", image.imageFit === "cover" ? "h-[75vh] object-cover" : "max-h-[85vh] object-contain")}
       />
       {image.caption && <figcaption className="text-center text-sm text-muted-foreground">{image.caption}</figcaption>}
     </figure>
@@ -111,11 +130,9 @@ function Picture({ image }: { image: GuideImage }) {
 function PageSkeleton() {
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="mb-8 space-y-3">
-        <div className="h-4 w-32 animate-pulse rounded-full bg-muted" />
-        <div className="h-9 w-3/4 animate-pulse rounded-lg bg-muted" />
-      </div>
-      <div className="h-96 animate-pulse rounded-xl bg-muted" />
+      <div className="skeleton mb-6 h-4 w-64 rounded-full" />
+      <div className="skeleton mb-8 h-32 rounded-2xl" />
+      <div className="skeleton h-96 rounded-2xl" />
     </div>
   );
 }
