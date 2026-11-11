@@ -73,6 +73,9 @@ export function SiteFooter() {
           <h2 id="footer-ministry" className="text-base font-semibold">
             {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
           </h2>
+          <h3 className="mt-1 text-sm font-medium opacity-85">
+            {isArabic ? "المديرية العامة للتطوير والدراسات" : "General Directorate for Development and Studies"}
+          </h3>
           <p className="mt-2 max-w-sm text-sm leading-6 opacity-80">
             {isArabic
               ? "تابع قنوات الوزارة الرسمية."
@@ -127,10 +130,15 @@ export function SiteFooter() {
           </a>
         </section>
 
-        <p className="self-end text-sm opacity-75 md:col-span-2 lg:col-span-1">
-          © {copyrightYear}{" "}
-          {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
-        </p>
+        <div className="self-end text-sm opacity-75 md:col-span-2 lg:col-span-1">
+          <p>
+            © {copyrightYear}{" "}
+            {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
+          </p>
+          <p className="mt-1 text-xs">
+            {isArabic ? "المديرية العامة للتطوير والدراسات" : "General Directorate for Development and Studies"}
+          </p>
+        </div>
       </div>
     </footer>
   );

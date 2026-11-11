@@ -43,7 +43,18 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
   return (
     <>
       <header className="w-full border-b border-[#d5dce2] bg-[#e8edf1]">
-        <div className="mx-auto flex max-w-7xl [direction:ltr] items-center justify-end px-4 py-3 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl [direction:ltr] items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 justify-start gap-2 rounded-full border-[#c7d1d9] bg-white px-3 text-left text-xs font-semibold text-slate-700 shadow-sm hover:border-[#aab9c5] hover:bg-white hover:text-slate-900 focus-visible:ring-primary/30"
+            onClick={toggleLanguage}
+            aria-label={isArabic ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
+          >
+            <Languages aria-hidden="true" className="size-4 text-primary" />
+            <span>{isArabic ? "English" : "العربية"}</span>
+          </Button>
           <Link
             to="/"
             aria-label={isArabic ? "الصفحة الرئيسية" : "Home"}
@@ -58,22 +69,25 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
         </div>
       </header>
       <header className="relative z-40 border-b border-[color-mix(in_oklch,var(--secondary-accent-foreground)_25%,var(--secondary-accent))] bg-[var(--secondary-accent)] text-[var(--secondary-accent-foreground)]">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
           <Link
             to="/"
-            className="flex items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
+            className="flex items-center gap-2.5 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--secondary-accent-foreground)]"
             aria-label={isArabic ? "الصفحة الرئيسية" : "Home"}
           >
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
               <Landmark aria-hidden="true" className="size-5" />
             </span>
             <span>
-              <span className="block text-sm font-semibold leading-tight">
+              <h2 className="text-[0.8rem] font-semibold leading-[1.1]">
                 {isArabic ? "دليل الخدمات" : "Services Catalogue"}
-              </span>
-              <span className="block text-xs text-[color-mix(in_oklch,var(--secondary-accent-foreground)_75%,transparent)]">
+              </h2>
+              <h3 className="mt-0.5 text-[0.65rem] font-medium leading-[1.1] text-[color-mix(in_oklch,var(--secondary-accent-foreground)_85%,transparent)]">
                 {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
-              </span>
+              </h3>
+              <p className="mt-0.5 text-[0.6rem] leading-[1.1] text-[color-mix(in_oklch,var(--secondary-accent-foreground)_70%,transparent)]">
+                {isArabic ? "المديرية العامة للتطوير والدراسات" : "General Directorate for Development and Studies"}
+              </p>
             </span>
           </Link>
 
@@ -108,17 +122,6 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
             >
               <FileDown aria-hidden="true" className="size-4" />
               <span className="hidden sm:inline">{pdfLabel}</span>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 border-[color-mix(in_oklch,var(--secondary-accent-foreground)_35%,transparent)] bg-transparent text-[var(--secondary-accent-foreground)] hover:bg-[color-mix(in_oklch,var(--secondary-accent-foreground)_12%,transparent)] hover:text-[var(--secondary-accent-foreground)]"
-              onClick={toggleLanguage}
-              aria-label={isArabic ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
-            >
-              <Languages aria-hidden="true" className="size-4" />
-              <span>{isArabic ? "English" : "العربية"}</span>
             </Button>
           </div>
         </div>

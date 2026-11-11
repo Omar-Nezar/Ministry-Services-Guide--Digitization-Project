@@ -55,12 +55,15 @@ export function Home() {
             <div className="mx-auto mb-3 flex size-14 items-center justify-center">
               <img src={moh_logo_mini_NBG} alt="Ministry of Housing Logo" className="h-18 w-18 object-contain" />
             </div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
-              {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
-            </p>
             <h1 className="mt-3 text-4xl font-semibold tracking-tight sm:text-5xl">
               {isArabic ? "دليل خدمات الوزارة" : "Ministry Services Catalogue"}
             </h1>
+            <h2 className="mt-4 text-sm font-semibold uppercase tracking-[0.12em] text-primary sm:text-base">
+              {isArabic ? "وزارة الإسكان والتخطيط العمراني" : "Ministry of Housing and Urban Planning"}
+            </h2>
+            <p className="mt-1 text-xs font-medium tracking-wide text-muted-foreground sm:text-sm">
+              {isArabic ? "المديرية العامة للتطوير والدراسات" : "General Directorate for Development and Studies"}
+            </p>
             <p className="mx-auto mt-4 max-w-xl text-base leading-7 text-muted-foreground">
               {isArabic
                 ? "اختر طريقة المتابعة."
