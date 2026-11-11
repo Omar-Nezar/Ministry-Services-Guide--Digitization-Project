@@ -63,7 +63,7 @@ export function Header({ links = [] }: { links?: HeaderLink[] }) {
             <img
               src={moh_logo_full}
               alt="Ministry of Housing Logo"
-              className="block h-12 w-auto max-w-55 object-contain sm:h-14"
+              className="block h-12 w-auto max-w-55 object-contain"
             />
           </Link>
         </div>
