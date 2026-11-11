@@ -70,10 +70,10 @@
     /* Official identity: the band behind the ministry logo, and the gold of the emblem */
     --brand-surface: #e8edf1;
     --brand-surface-foreground: #0d2a45;
-    --brand-gold: #9f905d;
+    --brand-gold: #a1905c;
     --secondary-sand: #c68e4c;
     --secondary-water: #225d6b;
-    --secondary-palm: #3c441b;
+    --secondary-palm: #4a4d33;
     --secondary-accent: #074169;
     --secondary-accent-foreground: #ffffff;
     /* Cool neutrals taken from the logo band, so every surface belongs to the same family */
@@ -84,7 +84,7 @@
     --popover: oklch(0.999 0.001 240);
     --popover-foreground: oklch(0.24 0.03 252);
     /* The chosen primary colour (red or gold) arrives as --brand-primary from the display settings */
-    --primary: var(--brand-primary, #de2f27);
+    --primary: var(--brand-primary, #df2e26);
     --primary-foreground: var(--brand-primary-foreground, #ffffff);
     --secondary: oklch(0.955 0.009 240);
     --secondary-foreground: oklch(0.3 0.03 252);
@@ -100,7 +100,7 @@
     /* Charts use the ministry's secondary palette */
     --chart-1: #074169;
     --chart-2: #225d6b;
-    --chart-3: #9f905d;
+    --chart-3: #a1905c;
     --chart-4: #c68e4c;
     --chart-5: #3d5e69;
     --radius: 0.625rem;
@@ -118,7 +118,7 @@
     /* Deep navy rather than neutral grey, so the dark mode keeps the ministry colours */
     --brand-surface: #e8edf1;
     /* A lighter tint of the primary with dark text, so it passes AA on the navy surfaces */
-    --primary: color-mix(in oklch, var(--brand-primary, #de2f27) 72%, white);
+    --primary: color-mix(in oklch, var(--brand-primary, #df2e26) 72%, white);
     --primary-foreground: oklch(0.2 0.03 25);
     --background: oklch(0.17 0.018 252);
     --foreground: oklch(0.955 0.006 240);

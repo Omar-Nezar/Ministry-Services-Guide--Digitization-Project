@@ -1,8 +1,8 @@
 export const colors = {
-    primary_red: "#de2f27",
-    primary_gold: "#9f905d",
+    primary_red: "#df2e26",
+    primary_gold: "#a1905c",
     secondary_sea: "#074169",
-    secondary_palm: "#3c441b",
+    secondary_palm: "#4a4d33",
     secondary_sand: "#c68e4c",
     secondary_mountain: "#633724",
     secondary_water: "#225d6b",

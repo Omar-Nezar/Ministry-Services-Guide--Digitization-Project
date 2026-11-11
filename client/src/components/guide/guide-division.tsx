@@ -64,28 +64,33 @@ export function GuideDivision() {
                 </span>
                 <h2 className="line-clamp-3 pt-1 leading-relaxed font-semibold">{serviceTitle(s.name)}</h2>
               </div>
-              {s.description && (
-                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{s.description}</p>
-              )}
-              <div className="mt-auto flex items-center justify-between gap-3 border-t pt-4 text-xs">
-                {s.duration ? (
-                  <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
-                    <Clock aria-hidden="true" className="size-3.5 shrink-0" />
-                    <span className="truncate">
-                      <span className="sr-only">{isArabic ? "المدة: " : "Duration: "}</span>
-                      {s.duration}
+              {/* Only the title is shown at rest; the rest opens on hover or keyboard focus */}
+              <div className="mt-auto grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-brand group-hover:grid-rows-[1fr] group-focus-visible:grid-rows-[1fr]">
+                <div className="min-h-0 overflow-hidden">
+                  {s.description && (
+                    <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-muted-foreground">{s.description}</p>
+                  )}
+                  <div className="flex items-center justify-between gap-3 border-t pt-4 mt-4 text-xs">
+                    {s.duration ? (
+                      <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                        <Clock aria-hidden="true" className="size-3.5 shrink-0" />
+                        <span className="truncate">
+                          <span className="sr-only">{isArabic ? "المدة: " : "Duration: "}</span>
+                          {s.duration}
+                        </span>
+                      </span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="flex shrink-0 items-center gap-1 font-semibold text-primary">
+                      {isArabic ? "التفاصيل" : "Details"}
+                      <Arrow
+                        aria-hidden="true"
+                        className="size-3.5 transition-transform duration-300 ease-brand group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
+                      />
                     </span>
-                  </span>
-                ) : (
-                  <span />
-                )}
-                <span className="flex shrink-0 items-center gap-1 font-semibold text-primary">
-                  {isArabic ? "التفاصيل" : "Details"}
-                  <Arrow
-                    aria-hidden="true"
-                    className="size-3.5 transition-transform duration-300 ease-brand group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-                  />
-                </span>
+                  </div>
+                </div>
               </div>
             </article>
           </Link>

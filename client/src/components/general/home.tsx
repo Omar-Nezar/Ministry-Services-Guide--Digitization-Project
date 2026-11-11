@@ -112,7 +112,7 @@ export function Home() {
                       className={cn(
                         "flex size-12 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 ease-brand group-hover:scale-105",
                         destination.featured
-                          ? "bg-secondary-accent-foreground/12 ring-1 ring-secondary-accent-foreground/20"
+                          ? "bg-primary text-primary-foreground shadow-card"
                           : "bg-primary/10 text-primary",
                       )}
                     >
@@ -141,8 +141,10 @@ export function Home() {
                       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                         <span
                           className={cn(
-                            "inline-flex items-center gap-2 text-sm font-semibold",
-                            destination.featured ? "text-secondary-accent-foreground" : "text-primary",
+                            "inline-flex items-center gap-2 rounded-full text-sm font-semibold",
+                            destination.featured
+                              ? "bg-primary px-4 py-2 text-primary-foreground shadow-card"
+                              : "text-primary",
                           )}
                         >
                           {isArabic ? "متابعة" : "Continue"}

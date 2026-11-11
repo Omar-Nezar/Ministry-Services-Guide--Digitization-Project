@@ -61,13 +61,13 @@ const secondaryColors: {
   {
     id: "mountain",
     label: "Mountain",
-    arabicLabel: "الجبل",
+    arabicLabel: "الجمال",
     color: colors.secondary_mountain,
   },
   {
     id: "water",
     label: "Water",
-    arabicLabel: "الماء",
+    arabicLabel: "المياه العذبة",
     color: colors.secondary_water,
   },
   {
