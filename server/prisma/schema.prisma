@@ -33,12 +33,21 @@ model FeedbackResponse {
   email         String?  @db.NVarChar(320)
   userId        Int?
   user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  /// JSON object keyed by the stable question IDs in shared/feedback.ts
+  /// JSON object keyed by the question IDs active when the response was submitted
   answers       String   @db.NVarChar(Max)
   createdAt     DateTime @default(now())
 
   @@index([respondentType, createdAt])
   @@map("feedback_responses")
+}
+
+/// One saved survey definition per respondent audience.
+model FeedbackSurvey {
+  respondentType String   @id @db.NVarChar(20)
+  questions      String   @db.NVarChar(Max)
+  updatedAt      DateTime @updatedAt
+
+  @@map("feedback_surveys")
 }
 
 model Session {

@@ -1,5 +1,5 @@
 import api from "@/slices/base";
-import type { FeedbackRespondentType } from "@shared/feedback";
+import type { FeedbackRespondentType, FeedbackSurveyConfig } from "@shared/feedback";
 
 export type FeedbackSubmission = {
   respondentType: FeedbackRespondentType;
@@ -8,6 +8,7 @@ export type FeedbackSubmission = {
 };
 
 export const feedbackApi = {
+  questions: () => api.get<FeedbackSurveyConfig>("/feedback/questions").then((r) => r.data),
   validateStaffEmail: (email: string) =>
     api.post<{ valid: true }>("/feedback/validate-staff-email", { email }),
   submit: (submission: FeedbackSubmission) => api.post("/feedback", submission),

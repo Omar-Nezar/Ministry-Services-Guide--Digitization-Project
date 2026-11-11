@@ -1,12 +1,12 @@
 export type FeedbackRespondentType = "staff" | "recipient";
 
-type FeedbackChoice = {
+export type FeedbackChoice = {
   value: string;
   label: string;
   labelAr: string;
 };
 
-type FeedbackQuestion =
+export type FeedbackQuestion =
   | {
     id: string;
     type: "section";
@@ -20,7 +20,7 @@ type FeedbackQuestion =
     type: "choice";
     prompt: string;
     promptAr: string;
-    required: true;
+    required: boolean;
     options: readonly FeedbackChoice[];
   }
   | {
@@ -28,9 +28,11 @@ type FeedbackQuestion =
     type: "text";
     prompt: string;
     promptAr: string;
-    required: false;
+    required: boolean;
     maxLength: number;
   };
+
+export type FeedbackSurveyConfig = Record<FeedbackRespondentType, FeedbackQuestion[]>;
 
 const yesNoOptions = [
   { value: "yes", label: "Yes", labelAr: "نعم" },
@@ -64,9 +66,8 @@ const frequencyOptions = [
 
 const feedbackLimit = 4000;
 
-// Edit each audience's questions here. Keep IDs stable for stored responses;
-// this shared definition drives both the form and the server-side validation.
-export const feedbackQuestions = {
+// These defaults initialize a new survey; saved survey definitions live in the database.
+export const defaultFeedbackQuestions: FeedbackSurveyConfig = {
   staff: [
     {
       id: "staff_workflows_section",
@@ -279,4 +280,95 @@ export const feedbackQuestions = {
       maxLength: feedbackLimit,
     },
   ],
-} as const satisfies Record<FeedbackRespondentType, readonly FeedbackQuestion[]>;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function boundedText(value: unknown, maxLength: number, allowEmpty = false): string | null {
+  if (typeof value !== "string") return null;
+  const text = value.trim();
+  return text.length <= maxLength && (allowEmpty || text.length > 0) ? text : null;
+}
+
+function optionalText(value: unknown, maxLength: number): string | null {
+  return value === undefined ? "" : boundedText(value, maxLength, true);
+}
+
+function parseQuestionList(value: unknown): FeedbackQuestion[] | null {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 100) return null;
+  const ids = new Set<string>();
+  const questions: FeedbackQuestion[] = [];
+
+  for (const raw of value) {
+    if (!isRecord(raw)) return null;
+    const id = raw["id"];
+    if (typeof id !== "string" || !/^[a-z0-9_-]{1,80}$/.test(id) || ids.has(id)) return null;
+    ids.add(id);
+
+    if (raw["type"] === "section") {
+      const title = boundedText(raw["title"], 200);
+      const titleAr = boundedText(raw["titleAr"], 200);
+      const description = optionalText(raw["description"], 1000);
+      const descriptionAr = optionalText(raw["descriptionAr"], 1000);
+      if (!title || !titleAr || description === null || descriptionAr === null) return null;
+      questions.push({
+        id,
+        type: "section",
+        title,
+        titleAr,
+        ...(description ? { description } : {}),
+        ...(descriptionAr ? { descriptionAr } : {}),
+      });
+      continue;
+    }
+
+    const prompt = boundedText(raw["prompt"], 500);
+    const promptAr = boundedText(raw["promptAr"], 500);
+    if (!prompt || !promptAr || typeof raw["required"] !== "boolean") return null;
+
+    if (raw["type"] === "choice") {
+      if (!Array.isArray(raw["options"]) || raw["options"].length < 2 || raw["options"].length > 20) return null;
+      const optionValues = new Set<string>();
+      const options: FeedbackChoice[] = [];
+      for (const option of raw["options"]) {
+        if (!isRecord(option)) return null;
+        const optionValue = option["value"];
+        const label = boundedText(option["label"], 200);
+        const labelAr = boundedText(option["labelAr"], 200);
+        if (
+          typeof optionValue !== "string" ||
+          !/^[a-z0-9_-]{1,80}$/.test(optionValue) ||
+          optionValues.has(optionValue) ||
+          !label ||
+          !labelAr
+        ) {
+          return null;
+        }
+        optionValues.add(optionValue);
+        options.push({ value: optionValue, label, labelAr });
+      }
+      questions.push({ id, type: "choice", prompt, promptAr, required: raw["required"], options });
+      continue;
+    }
+
+    if (raw["type"] === "text") {
+      const maxLength = raw["maxLength"];
+      if (typeof maxLength !== "number" || !Number.isInteger(maxLength) || maxLength < 1 || maxLength > 4000) return null;
+      questions.push({ id, type: "text", prompt, promptAr, required: raw["required"], maxLength });
+      continue;
+    }
+
+    return null;
+  }
+
+  return questions.some((question) => question.type !== "section") ? questions : null;
+}
+
+/** Validate and normalize survey definitions received from the admin editor or database. */
+export function parseFeedbackSurveyConfig(value: unknown): FeedbackSurveyConfig | null {
+  if (!isRecord(value)) return null;
+  const staff = parseQuestionList(value["staff"]);
+  const recipient = parseQuestionList(value["recipient"]);
+  return staff && recipient ? { staff, recipient } : null;
+}

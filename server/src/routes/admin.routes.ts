@@ -1,6 +1,7 @@
 import { Router } from "express";
 import * as admin from "../controllers/admin.controller.js";
 import * as pdf from "../controllers/pdf.controller.js";
+import { getFeedbackSurvey, updateFeedbackSurvey } from "../controllers/feedback.controller.js";
 import { authenticateSession } from "../middlewares/auth.middleware.js";
 import { requireRole } from "../middlewares/rbac.middleware.js";
 import { uploadImage } from "../middlewares/upload.middleware.js";
@@ -11,6 +12,8 @@ adminRouter.use(authenticateSession, requireRole("admin"));
 
 adminRouter.get("/dashboard", admin.getDashboard);
 adminRouter.get("/updates", admin.listUpdates);
+adminRouter.get("/feedback-survey", getFeedbackSurvey);
+adminRouter.put("/feedback-survey", updateFeedbackSurvey);
 
 adminRouter.get("/staff", admin.listStaff);
 adminRouter.post("/staff", admin.createStaff);

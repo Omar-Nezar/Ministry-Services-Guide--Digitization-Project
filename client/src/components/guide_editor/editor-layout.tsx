@@ -28,6 +28,7 @@ export const editorPaths = {
   labels: "/moh/editor/labels",
   staff: "/moh/editor/staff",
   pdf: "/moh/editor/pdf",
+  feedbackSurvey: "/moh/editor/feedback-survey",
 };
 
 /** The services editor: the site header, the category/service tree, and the open page. */
@@ -107,6 +108,11 @@ export function EditorLayout() {
             {isAdmin && (
               <NavLink to={editorPaths.staff} className={navClass}>
                 {isArabic ? "الموظفون" : "Staff"}
+              </NavLink>
+            )}
+            {isAdmin && (
+              <NavLink to={editorPaths.feedbackSurvey} className={navClass}>
+                {isArabic ? "استبيان الملاحظات" : "Feedback survey"}
               </NavLink>
             )}
           </nav>

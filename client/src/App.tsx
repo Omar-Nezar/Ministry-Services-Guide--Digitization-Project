@@ -41,6 +41,9 @@ const LabelsPage = lazy(() =>
 const PdfPagesPage = lazy(() =>
   import("@/components/guide_editor/pdf-pages-page").then((m) => ({ default: m.PdfPagesPage }))
 );
+const FeedbackSurveyPage = lazy(() =>
+  import("@/components/guide_editor/feedback-survey-page").then((m) => ({ default: m.FeedbackSurveyPage }))
+);
 
 function AppRoutes() {
   const dispatch = useDispatch<AppDispatch>();
@@ -98,6 +101,7 @@ function AppRoutes() {
               <Route path="labels" element={<LabelsPage />} />
               <Route path="staff" element={<StaffPage />} />
               <Route path="pdf" element={<PdfPagesPage />} />
+              <Route path="feedback-survey" element={<FeedbackSurveyPage />} />
             </Route>
 
             <Route

@@ -1,4 +1,5 @@
 import api, { apiBaseUrl } from "@/slices/base";
+import type { FeedbackSurveyConfig } from "@shared/feedback";
 
 // ---- what the public guide reads (GET /guide/...) ----
 
@@ -204,6 +205,9 @@ export const adminApi = {
   updateStaff: (id: number, data: { name?: string; divisionIds?: number[]; isActive?: boolean }) =>
     api.patch<StaffMember>(`/admin/staff/${id}`, data).then((r) => r.data),
   deleteStaff: (id: number) => api.delete(`/admin/staff/${id}`),
+  feedbackSurvey: () => get<FeedbackSurveyConfig>("/admin/feedback-survey"),
+  saveFeedbackSurvey: (survey: FeedbackSurveyConfig) =>
+    api.put<FeedbackSurveyConfig>("/admin/feedback-survey", survey).then((r) => r.data),
 
   addPdfPage: (file: File, where: { slot: PdfPage["slot"]; serviceDivisionId?: number }, size: PdfPage["size"], orientation: PdfPage["orientation"]) => {
     const form = pictureForm(file);

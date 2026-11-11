@@ -1,4 +1,4 @@
-import { useState, type SubmitEvent } from "react";
+import { useEffect, useState, type SubmitEvent } from "react";
 import { useSelector } from "react-redux";
 import { Link } from "react-router";
 import axios from "axios";
@@ -23,7 +23,8 @@ import { Header } from "@/components/general/header";
 import { useLanguage } from "@/components/settings/language-context";
 import { feedbackApi } from "@/lib/feedback-api";
 import {
-  feedbackQuestions,
+  type FeedbackQuestion,
+  type FeedbackSurveyConfig,
   type FeedbackRespondentType,
 } from "@shared/feedback";
 import type { RootState } from "@/store/store";
@@ -47,8 +48,8 @@ function getErrorMessage(error: unknown, isArabic: boolean): string {
     : "We couldn't submit your feedback. Check your connection and try again.";
 }
 
-function getFirstStepId(respondentType: FeedbackRespondentType): string {
-  const firstStep = feedbackQuestions[respondentType][0];
+function getFirstStepId(survey: FeedbackSurveyConfig, respondentType: FeedbackRespondentType): string {
+  const firstStep = survey[respondentType][0];
   if (!firstStep) {
     throw new Error(`No feedback survey steps configured for ${respondentType}.`);
   }
@@ -59,6 +60,8 @@ export function FeedbackSurvey() {
   const { isArabic } = useLanguage();
   const user = useSelector((state: RootState) => state.auth.user);
   const isStaff = user?.roles.some((role) => role === "staff" || role === "admin") ?? false;
+  const [surveyConfig, setSurveyConfig] = useState<FeedbackSurveyConfig>();
+  const [surveyLoadFailed, setSurveyLoadFailed] = useState(false);
   const [respondentType, setRespondentType] = useState<FeedbackRespondentType | null>(
     isStaff ? "staff" : null,
   );
@@ -71,9 +74,24 @@ export function FeedbackSurvey() {
   const [submitted, setSubmitted] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [answersByQuestion, setAnswersByQuestion] = useState<Record<string, string>>({});
-  const [activeQuestion, setActiveQuestion] = useState(
-    isStaff ? getFirstStepId("staff") : "respondentType",
-  );
+  const [activeQuestion, setActiveQuestion] = useState("respondentType");
+
+  useEffect(() => {
+    let active = true;
+    feedbackApi.questions().then(
+      (config) => {
+        if (!active) return;
+        setSurveyConfig(config);
+        if (isStaff) setActiveQuestion(getFirstStepId(config, "staff"));
+      },
+      () => {
+        if (active) setSurveyLoadFailed(true);
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [isStaff]);
 
   const roleItems = [
     {
@@ -83,17 +101,12 @@ export function FeedbackSurvey() {
     },
   ] as const;
 
-  const surveyItems = respondentType ? feedbackQuestions[respondentType] : [];
+  const surveyItems = respondentType && surveyConfig ? surveyConfig[respondentType] : [];
   const questions = surveyItems.filter((item) => item.type !== "section");
   const surveySections = surveyItems.filter((item) => item.type === "section");
-  const activeSectionStep = surveyItems.find(
-    (item) => item.type === "section" && item.id === activeQuestion,
-  );
-  const sectionByQuestion = new Map<
-    string,
-    Extract<(typeof surveyItems)[number], { type: "section" }>
-  >();
-  let currentSection: Extract<(typeof surveyItems)[number], { type: "section" }> | undefined;
+  const activeSectionStep = surveyItems.find((item) => item.type === "section" && item.id === activeQuestion);
+  const sectionByQuestion = new Map<string, Extract<FeedbackQuestion, { type: "section" }>>();
+  let currentSection: Extract<FeedbackQuestion, { type: "section" }> | undefined;
   for (const item of surveyItems) {
     if (item.type === "section") {
       currentSection = item;
@@ -102,6 +115,20 @@ export function FeedbackSurvey() {
     }
   }
   const activeSection = sectionByQuestion.get(activeQuestion);
+  const reviewSections = [
+    ...surveySections.map((section) => ({
+      ...section,
+      questions: questions.filter((question) => sectionByQuestion.get(question.id)?.id === section.id),
+    })),
+    {
+      id: "unsectioned",
+      title: "Other questions",
+      titleAr: "أسئلة أخرى",
+      description: "",
+      descriptionAr: "",
+      questions: questions.filter((question) => !sectionByQuestion.has(question.id)),
+    },
+  ];
   const activeStepIndex = surveyItems.findIndex((item) => item.id === activeQuestion);
   const nextSurveyStep = surveyItems[activeStepIndex + 1];
   const activeQuestionNumber = questions.findIndex(
@@ -129,7 +156,8 @@ export function FeedbackSurvey() {
     const choice = new FormData(event.currentTarget).get("respondentType");
     if (choice !== "staff" && choice !== "recipient") return;
     setRespondentType(choice);
-    setActiveQuestion(getFirstStepId(choice));
+    if (!surveyConfig) return;
+    setActiveQuestion(getFirstStepId(surveyConfig, choice));
     setEmailAccepted(choice === "recipient");
     setEmailError("");
     setSubmitError("");
@@ -152,7 +180,8 @@ export function FeedbackSurvey() {
       await feedbackApi.validateStaffEmail(email);
       setStaffEmail(email);
       setEmailAccepted(true);
-      setActiveQuestion(getFirstStepId("staff"));
+      if (!surveyConfig) return;
+      setActiveQuestion(getFirstStepId(surveyConfig, "staff"));
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
         const code = error.response?.data?.code;
@@ -187,9 +216,10 @@ export function FeedbackSurvey() {
   async function submitAnswers() {
     if (!respondentType || !emailAccepted || submitting) return;
 
-    const unansweredRequiredQuestion = questions.find(
-      (question) => question.required && !answersByQuestion[question.id],
-    );
+    const unansweredRequiredQuestion = questions.find((question) => {
+      const answer = answersByQuestion[question.id] ?? "";
+      return question.required && (question.type === "text" ? !answer.trim() : !answer);
+    });
     if (unansweredRequiredQuestion) {
       setSubmitError(
         isArabic
@@ -268,6 +298,14 @@ export function FeedbackSurvey() {
                     ? "شاركنا رأيك لمساعدتنا على تطوير دليل الخدمات."
                     : "Tell us what you think to help improve the services catalogue."}
                 </p>
+                {!surveyConfig ? (
+                  <p role={surveyLoadFailed ? "alert" : "status"} className={surveyLoadFailed ? "mt-5 text-sm text-destructive" : "mt-5 text-sm text-muted-foreground"}>
+                    {surveyLoadFailed
+                      ? isArabic ? "تعذر تحميل الاستبيان. يرجى المحاولة مرة أخرى لاحقًا." : "Unable to load the survey. Please try again later."
+                      : isArabic ? "جارٍ تحميل الاستبيان…" : "Loading survey…"}
+                  </p>
+                ) : (
+                <>
                 {respondentType && emailAccepted && !reviewing && !activeSectionStep && activeSection && (
                   <div
                     className="mt-4 flex flex-col gap-0.5 rounded-lg border bg-muted/40 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3"
@@ -368,11 +406,9 @@ export function FeedbackSurvey() {
                       </p>
                     </div>
                     <div className="space-y-4">
-                      {surveySections.map((section) => {
-                        const sectionQuestions = questions.filter(
-                          (question) => sectionByQuestion.get(question.id)?.id === section.id,
-                        );
-
+                      {reviewSections.map((section) => {
+                        const sectionQuestions = section.questions;
+                        if (sectionQuestions.length === 0) return null;
                         return (
                           <section
                             key={section.id}
@@ -637,6 +673,8 @@ export function FeedbackSurvey() {
                     </QuestionnaireActions>
                   </Questionnaire>
                   </>
+                )}
+                </>
                 )}
               </>
             )}
