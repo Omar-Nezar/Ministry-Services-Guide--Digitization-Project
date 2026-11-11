@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "@/components/settings/language-context";
 import { Button } from "@/components/ui/button";
+import { ColorPick as ColorInput } from "@/components/ui/color-pick";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tip } from "@/components/ui/tip";
 import { extensions } from "@/lib/guide-tiptap";
@@ -69,6 +70,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       bold: editor.isActive("bold"),
       italic: editor.isActive("italic"),
       underline: editor.isActive("underline"),
+      highlightActive: editor.isActive("highlight"),
       bulletList: editor.isActive("bulletList"),
       orderedList: editor.isActive("orderedList"),
       inTable: editor.isActive("table"),
@@ -110,10 +112,25 @@ function Toolbar({ editor }: { editor: Editor }) {
           </option>
         ))}
       </select>
-      <ColorPick label={t("لون النص", "Text colour")} icon={<Palette />} value={state.color} onChange={(c) => chain().setColor(c).run()} />
       <ColorPick
-        label={t("تظليل (زر الفأرة الأيمن للإزالة)", "Highlight (right-click to remove)")}
-        icon={<Highlighter />}
+        label={t("لون النص", "Text colour")}
+        icon={<Palette />}
+        value={state.color}
+        onChange={(color) => {
+          editor.commands.focus();
+          editor.commands.setColor(color);
+        }}
+      />
+      <Btn
+        label={t("تظليل", "Highlight")}
+        active={state.highlightActive}
+        onClick={() => chain().toggleHighlight({ color: state.highlight }).run()}
+      >
+        <Highlighter />
+      </Btn>
+      <ColorPick
+        label={t("لون التظليل (زر الفأرة الأيمن للإزالة)", "Highlight colour (right-click to remove)")}
+        icon={<Palette />}
         value={state.highlight}
         onChange={(c) => chain().setHighlight({ color: c }).run()}
         onClear={() => chain().unsetHighlight().run()}
@@ -238,6 +255,7 @@ function ColorPick({
     <Tip label={label}>
       <label
         className="relative inline-flex size-7 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent [&_svg]:size-4"
+        onMouseDown={(e) => e.preventDefault()}
         onContextMenu={(e) => {
           if (onClear) {
             e.preventDefault();
@@ -247,7 +265,12 @@ function ColorPick({
       >
         {icon}
         <span className="absolute inset-x-1 bottom-0.5 h-1 rounded" style={{ background: value }} />
-        <input type="color" aria-label={label} className="sr-only" value={value} onChange={(e) => onChange(e.target.value)} />
+        <ColorInput
+          aria-label={label}
+          className="absolute inset-0 size-full cursor-pointer opacity-0"
+          value={value}
+          onCommit={onChange}
+        />
       </label>
     </Tip>
   );
